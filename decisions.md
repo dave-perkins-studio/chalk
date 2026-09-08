@@ -52,3 +52,30 @@ Only the confirmed one goes into the build.
 **Gates 1 and 2 are being merged** into one review pack. David is not at the
 keyboard, the work is on a branch, master and the live site are untouched, and
 a page he can click is worth more than a written proposal he'd have to imagine.
+
+## 2026-09-08 — Gate 2 and 3 approved by David: "run all proposed improvements and updates, merge and publish"
+
+Shipping is authorised, including publishing to the live URL family may hold.
+
+**The designer's open question, resolved.** They asked whether Doors and
+windows should collapse once a room has openings, since its add form is six
+controls sitting permanently under a two-row list. The research says keep the
+list visible, and it is right: you check the door position constantly while
+placing furniture near it. But the research's argument was about the *list*,
+not the *form*. So: keep the list open, collapse the add form behind its own
+`<details>`. That satisfies both, and matches how the furniture block already
+works, where the list is open and Common sizes is collapsed.
+
+**Proposed improvements, and their status going into the fix cycle:**
+
+| Proposal | Source | Status |
+|---|---|---|
+| Selected item's fields inside its list row | research §5 | built |
+| Progressive disclosure for once-a-visit sections | research §5, GOV.UK | built |
+| Flag overlapping openings on a wall | research §5, verified by me | built |
+| Protect the canvas status line | research §5 | kept |
+| Full width, app shell, no page scroll | my Gate 1 additions | built |
+| Empty state for a first-time visitor | my Gate 1 addition | built |
+| Collapse the openings *add form*, keep the list | this decision | to build |
+| Everything design-qa raises | QA gate | pending |
+| Separate planner per job; bottom library drawer | research §5 | rejected, with reasons in the research |

@@ -6,13 +6,37 @@ Updated: 2026-09-08
 |---|---|---|
 | Research | done | `research/panel-research.md` |
 | Gate 1, Frame | done, logged in decisions.md | recommendation (c) accepted |
-| Concept, ui-designer | running (opus) | restructured `index.html` + `brand.md` |
+| Concept, ui-designer | done, commit dab31dc | restructured `index.html` + `brand.md` |
 | Gate 2, Direction | not started | clickable prototype |
-| QA, design-qa | not started | `qa/qa-report.md` |
+| QA, design-qa | running | `qa/qa-report.md` |
 | Fix cycle | not started | — |
 | Gate 3, Ship | not started | merged to master, published |
 
-**Next action:** when the designer reports, verify the deliverables exist on disk and the app still works, then run design-qa. Gates 1 and 2 are being presented together as one pack.
+**Next action:** when QA reports, reconcile its findings with the one already
+confirmed below, run one fix cycle, then present Gates 1 to 3 as a single pack.
+Do not merge to master or publish without David's word: the live URL is shared
+with family, so shipping is his call, not mine.
+
+## Verified against disk, not against the summary
+
+- `index.html` on `redesign` is 1,972 lines against master's 1,812. `brand.md`
+  and both journals exist.
+- The Markdown functions are byte-identical to master: `serialiseRoom`,
+  `serialise`, `parsePlan`, `parseCut`, `normalise`. The format is safe.
+- The designer's claim of stray JavaScript inside the `<style>` block on master
+  is true, and it was my own bug: a string replace matched a comment in the CSS
+  as well as the one in the script, duplicating a block of room-switcher code as
+  junk CSS. Master has 14 such lines; the redesign branch has none, so the merge
+  carries the fix.
+- Ran it myself: no page scroll, plan 964px wide at 1440, selecting an item
+  expands its fields inside its own row, typing in X keeps focus and the caret
+  and the canvas follows.
+
+## Confirmed finding, seeded into QA
+
+Deleting the selected item while focus is in one of its row fields leaves focus
+on `#sel-x`, which is then invisible. Worse than landing on the body, because
+the browser still believes something is focused.
 
 ## Measured before-state (8 Sep, live site, 1280x900)
 
