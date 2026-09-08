@@ -1,0 +1,1418 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Room planner &middot; Perkins</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inclusive+Sans:wght@300;400&family=Jost:wght@500&family=Petrona:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="excursion-web.css">
+<style>
+/* Planner-only rules. Everything here is built from excursion-web.css tokens;
+   no hex is typed by hand. The stylesheet carries no form-field rules and its
+   .btn is a 48px control, so fields and a small button variant are added here
+   in the same grammar: square, hairline ring, weighted bottom edge, GOV.UK
+   focus copied verbatim from section 21. */
+
+.planner{padding-top:var(--u2);padding-bottom:var(--u4)}
+@media (min-width:900px){
+  .planner{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--u2);align-items:start}
+}
+
+/* --- canvas ------------------------------------------------------------- */
+.planner-canvas{min-width:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:var(--u-half);margin:var(--u) 0}
+#plan{width:100%;height:auto;max-height:calc(100vh - 240px);display:block;
+  touch-action:none;background:transparent}
+
+.grid-10,.grid-100{stroke:var(--grid);fill:none}
+.grid-100{stroke:var(--rule-faint)}
+.room-floor{fill:var(--paper)}
+.room-wall{fill:none;stroke:var(--ink);stroke-width:2}
+.dim-line{stroke:var(--ink-faint);stroke-width:1}
+.dim-text{fill:var(--ink-muted);font-family:var(--data);font-weight:var(--data-weight);
+  letter-spacing:.08em;text-transform:uppercase}
+
+.opening-window{stroke:var(--blue);stroke-width:4;fill:none}
+.opening-gap{stroke:var(--paper);stroke-width:4;fill:none}
+.opening-leaf{stroke:var(--ink-muted);stroke-width:1.5;fill:none}
+.opening-arc{stroke:var(--ink-faint);stroke-width:1;fill:none;stroke-dasharray:6 5}
+.opening-hit{fill:transparent;stroke:transparent;stroke-width:14;cursor:pointer}
+
+.item rect.body{fill:var(--paper-tint);stroke:var(--ink);stroke-width:1}
+.item text{pointer-events:none}
+.item .name{fill:var(--ink);font-family:var(--reading)}
+.item .dims{fill:var(--ink-muted);font-family:var(--data);font-weight:var(--data-weight);
+  letter-spacing:.06em}
+.item{cursor:grab}
+.item.is-dragging{cursor:grabbing}
+.item.is-selected rect.body{stroke:var(--blue);stroke-width:3}
+.item.is-flagged rect.body{stroke:var(--berry);stroke-dasharray:7 4}
+.item.is-flagged .name{fill:var(--berry-ink)}
+.item.is-selected.is-flagged rect.body{stroke:var(--berry-deep);stroke-width:3}
+.item:focus{outline:none}
+.item .focus-ring{fill:none;stroke:transparent;stroke-width:6}
+.item:focus-visible .focus-ring{stroke:var(--focus-yellow)}
+.item:focus-visible rect.body{stroke:var(--focus-ink);stroke-width:3}
+
+/* --- panel -------------------------------------------------------------- */
+.planner-panel{min-width:0}
+.panel-section{padding-bottom:var(--u2)}
+.panel-section > .kicker{margin-bottom:var(--u-half)}
+
+.field-row{display:flex;gap:var(--u-half);flex-wrap:wrap}
+.field{display:block;margin-bottom:var(--u-half);flex:1 1 90px;min-width:0}
+.field > span{display:block;font-family:var(--wayfind);font-weight:500;font-size:13px;
+  line-height:1.3;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);
+  margin-bottom:4px}
+input[type=text],input[type=number],select,textarea{
+  font-family:var(--reading);font-size:17px;line-height:1.4;color:var(--ink);
+  background:var(--paper);border:1px solid var(--rule);border-bottom:2px solid var(--rule);
+  border-radius:0;min-height:44px;padding:8px 10px;width:100%;
+  -webkit-appearance:none;appearance:none;
+  transition:border-color var(--box-fade) ease-out}
+textarea{min-height:96px;resize:vertical;font-size:15px}
+select{background-image:none}
+input:hover:not(:focus-visible),select:hover:not(:focus-visible),
+textarea:hover:not(:focus-visible){border-color:var(--edge-deep)}
+input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:3px solid transparent;color:var(--focus-ink);background-color:var(--focus-yellow);
+  box-shadow:0 3px 0 var(--focus-ink);border-color:var(--focus-ink)}
+
+.btn-small{font-family:var(--wayfind);font-weight:500;font-size:14px;line-height:1;
+  display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:9px 12px;
+  border-radius:0;cursor:pointer;background:var(--paper-tint);color:var(--blue);
+  border:1px solid var(--rule);border-bottom:2px solid var(--blue);
+  transition:border-color var(--box-fade) ease-out,color var(--box-fade) ease-out,
+             background-color var(--box-fade) ease-out}
+.btn-small:hover:not(:focus-visible){color:var(--edge-deep);border-color:var(--edge-deep)}
+.btn-small:active{transform:translateY(3px);border-bottom-width:1px;margin-bottom:2px}
+.btn-small.is-done{color:var(--blue);border-bottom-color:var(--blue)}
+.btn-small.ghost{background:transparent}
+.btn-small.ghost:hover:not(:focus-visible){background:var(--paper-tint)}
+.btn-small[aria-pressed=true]{background:var(--paper-tint);color:var(--edge-deep);
+  border-bottom-color:var(--edge-deep)}
+
+.rows{list-style:none;margin:0;padding:0;border-top:1px dashed var(--rule-faint)}
+.rows li{border-bottom:1px dashed var(--rule-faint);display:flex;align-items:center;
+  gap:var(--u-half);padding:10px 0;transition:background-color var(--box-fade) ease-out}
+.rows li.is-selected{background:var(--paper-tint);box-shadow:inset 0 -3px 0 var(--blue)}
+.row-main{flex:1 1 auto;min-width:0;text-align:left;background:none;border:0;padding:2px 4px;
+  cursor:pointer;font:inherit;color:inherit}
+.row-name{display:block;font-family:var(--reading);font-size:16px;color:var(--ink)}
+.row-meta{display:block;font-family:var(--data);font-weight:var(--data-weight);font-size:12.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);margin-top:2px}
+.row-flag{color:var(--berry-ink);text-transform:none;letter-spacing:0;font-size:13px}
+.empty{font-family:var(--reading);font-size:15px;color:var(--ink-muted);
+  padding:10px 0;margin:0}
+
+details.presets{border-top:1px dashed var(--rule-faint);padding-top:var(--u-half)}
+details.presets summary{font-family:var(--wayfind);font-weight:500;font-size:14px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--blue);cursor:pointer;
+  padding:8px 2px;min-height:36px;display:flex;align-items:center}
+details.presets summary:focus-visible{outline:3px solid transparent;color:var(--focus-ink);
+  background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink)}
+
+.status{font-family:var(--reading);font-size:14px;color:var(--ink-muted);margin:var(--u-half) 0 0;
+  min-height:1.4em}
+.status.is-warn{color:var(--berry-ink)}
+.hint{font-family:var(--reading);font-size:14px;color:var(--ink-muted);margin:0 0 var(--u-half)}
+.share-buttons{display:flex;flex-wrap:wrap;gap:var(--u-half);margin-bottom:var(--u-half)}
+.footer-note{display:flex;gap:var(--u);align-items:center;justify-content:center;
+  flex-wrap:wrap}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:0.01ms !important;animation-duration:0.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+<div class="frame" aria-hidden="true"></div>
+
+<div class="page">
+
+  <header class="hold site-header">
+    <a class="masthead" href="./" aria-label="Perkins Room planner">
+      <span class="plate">Perkins</span>
+      <span class="co">Room planner</span>
+    </a>
+  </header>
+
+  <hr class="rule rule--bolt">
+
+  <main id="main" class="hold planner">
+
+    <section class="planner-canvas" aria-label="Room plan">
+      <p class="kicker" id="plan-caption">Bedroom 1 &middot; 4.00 &times; 3.00 m</p>
+
+      <div class="toolbar" role="toolbar" aria-label="Plan controls">
+        <button type="button" class="btn-small" id="btn-grid" aria-pressed="true">Grid</button>
+        <button type="button" class="btn-small" id="btn-snap" aria-pressed="true">Snap 5 cm</button>
+        <button type="button" class="btn-small ghost" id="btn-rotate">Rotate</button>
+        <button type="button" class="btn-small ghost" id="btn-duplicate">Duplicate</button>
+        <button type="button" class="btn-small ghost" id="btn-delete">Delete</button>
+        <button type="button" class="btn-small ghost" id="btn-undo">Undo</button>
+      </div>
+
+      <svg id="plan" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"
+           role="img" aria-labelledby="plan-caption"></svg>
+      <p class="status" id="canvas-status" role="status"></p>
+    </section>
+
+    <aside class="planner-panel" aria-label="Furniture and sharing">
+
+      <section class="panel-section" aria-labelledby="k-room">
+        <p class="kicker" id="k-room">Room</p>
+        <label class="field"><span>Name</span>
+          <input type="text" id="room-name" autocomplete="off"></label>
+        <div class="field-row">
+          <label class="field"><span>Width, cm</span>
+            <input type="number" id="room-width" min="50" max="3000" step="1"></label>
+          <label class="field"><span>Depth, cm</span>
+            <input type="number" id="room-depth" min="50" max="3000" step="1"></label>
+        </div>
+      </section>
+
+      <section class="panel-section" aria-labelledby="k-openings">
+        <p class="kicker" id="k-openings">Doors and windows</p>
+        <ul class="rows" id="opening-rows"></ul>
+        <div class="field-row">
+          <label class="field"><span>Type</span>
+            <select id="op-kind"><option value="door">Door</option><option value="window">Window</option></select></label>
+          <label class="field"><span>Wall</span>
+            <select id="op-wall">
+              <option value="N">North, top</option><option value="E">East, right</option>
+              <option value="S">South, bottom</option><option value="W">West, left</option>
+            </select></label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>From corner, cm</span>
+            <input type="number" id="op-offset" min="0" step="1" value="40"></label>
+          <label class="field"><span>Width, cm</span>
+            <input type="number" id="op-width" min="10" step="1" value="80"></label>
+        </div>
+        <div class="field-row" id="op-door-fields">
+          <label class="field"><span>Swings</span>
+            <select id="op-swing"><option value="in">Into room</option><option value="out">Out</option></select></label>
+          <label class="field"><span>Hinge</span>
+            <select id="op-hinge"><option value="left">Left</option><option value="right">Right</option></select></label>
+        </div>
+        <button type="button" class="btn-small" id="op-add">Add opening</button>
+      </section>
+
+      <section class="panel-section" aria-labelledby="k-furniture">
+        <p class="kicker" id="k-furniture">Furniture</p>
+        <ul class="rows" id="item-rows"></ul>
+      </section>
+
+      <section class="panel-section" aria-labelledby="k-selected" id="selected-section" hidden>
+        <p class="kicker" id="k-selected">Selected item</p>
+        <label class="field"><span>Name</span>
+          <input type="text" id="sel-name" autocomplete="off"></label>
+        <div class="field-row">
+          <label class="field"><span>Width, cm</span>
+            <input type="number" id="sel-w" min="1" step="1"></label>
+          <label class="field"><span>Depth, cm</span>
+            <input type="number" id="sel-d" min="1" step="1"></label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>X, cm</span>
+            <input type="number" id="sel-x" step="1"></label>
+          <label class="field"><span>Y, cm</span>
+            <input type="number" id="sel-y" step="1"></label>
+          <label class="field"><span>Turn</span>
+            <select id="sel-r">
+              <option value="0">0&deg;</option><option value="90">90&deg;</option>
+              <option value="180">180&deg;</option><option value="270">270&deg;</option>
+            </select></label>
+        </div>
+        <label class="field"><span>Notes</span>
+          <input type="text" id="sel-notes" autocomplete="off"></label>
+      </section>
+
+      <section class="panel-section" aria-labelledby="k-add">
+        <p class="kicker" id="k-add">Add furniture</p>
+        <label class="field"><span>Name</span>
+          <input type="text" id="add-name" autocomplete="off"></label>
+        <div class="field-row">
+          <label class="field"><span>Width, cm</span>
+            <input type="number" id="add-w" min="1" step="1"></label>
+          <label class="field"><span>Depth, cm</span>
+            <input type="number" id="add-d" min="1" step="1"></label>
+        </div>
+        <button type="button" class="btn-small" id="add-item">Add to list</button>
+
+        <details class="presets" id="presets">
+          <summary>Common sizes</summary>
+          <ul class="rows" id="preset-rows"></ul>
+        </details>
+      </section>
+
+      <section class="panel-section" aria-labelledby="k-share">
+        <p class="kicker" id="k-share">Share</p>
+        <div class="share-buttons">
+          <button type="button" class="btn-small" id="copy-md">Copy text</button>
+          <button type="button" class="btn-small ghost" id="download-md">Download .md</button>
+          <button type="button" class="btn-small" id="copy-png">Copy image</button>
+          <button type="button" class="btn-small ghost" id="download-png">Download PNG</button>
+        </div>
+        <p class="hint">Paste a plan someone has sent you, or press Cmd&nbsp;+&nbsp;V anywhere on this page.</p>
+        <label class="field"><span>Paste a plan</span>
+          <textarea id="paste-box" spellcheck="false"></textarea></label>
+        <button type="button" class="btn-small" id="load-md">Load plan</button>
+        <p class="status" id="share-status" role="status"></p>
+      </section>
+
+    </aside>
+  </main>
+
+  <hr class="rule">
+
+  <footer class="hold site-footer">
+    <div class="ticket">
+      <p>Room planner &middot; sizes in cm &middot; saved in this browser only</p>
+    </div>
+    <p class="footer-note">
+      <button type="button" class="btn-small ghost" id="clear-data">Clear saved plan</button>
+    </p>
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+/* ===========================================================================
+   Room planner. One file, no build step, no dependencies.
+   Sections: constants · state · model · markdown · render · pointer ·
+             keyboard · panel · share · storage · boot
+   Units are centimetres, integers, everywhere. Metres appear only in labels.
+   =========================================================================== */
+
+/* --- constants ----------------------------------------------------------- */
+
+const STORE_KEY = "room-planner:v1";
+const MARGIN = 60;            // cm of viewBox margin for dimension labels
+const UNDO_CAP = 50;
+const WALLS = ["N", "E", "S", "W"];
+
+const PRESETS = [
+  ["Single bed", 90, 190], ["Double bed", 135, 190], ["King bed", 150, 200],
+  ["Super king bed", 180, 200], ["Cot", 60, 120], ["Bedside table", 40, 40],
+  ["Wardrobe, double", 100, 60], ["Wardrobe, triple", 150, 60],
+  ["Chest of drawers", 80, 45], ["Desk", 120, 60], ["Office chair", 60, 60],
+  ["Sofa, 2-seat", 150, 90], ["Sofa, 3-seat", 200, 90], ["Armchair", 90, 90],
+  ["Coffee table", 100, 50], ["Dining table, 4", 120, 80],
+  ["Dining table, 6", 160, 90], ["Dining chair", 45, 50],
+  ["TV unit", 150, 40], ["Bookcase", 80, 30], ["Sideboard", 150, 45]
+];
+
+/* --- state --------------------------------------------------------------- */
+
+let model = null;         // the whole saved document
+let selectedId = null;    // furniture item id
+let selectedOpening = -1; // index into room.openings, -1 for none
+let undoStack = [];
+let saveTimer = null;
+
+const $ = (id) => document.getElementById(id);
+const svg = $("plan");
+
+function room() { return model.rooms.find(r => r.id === model.currentRoom) || model.rooms[0]; }
+function newId() { return Math.random().toString(36).slice(2, 8); }
+function esc(s) { return String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+function metres(cm) { return (cm / 100).toFixed(2) + " m"; }
+
+/* --- model --------------------------------------------------------------- */
+
+function defaultModel() {
+  return {
+    version: 1,
+    currentRoom: "room-1",
+    settings: { snap: 5, grid: true },
+    rooms: [{ id: "room-1", name: "Bedroom 1", width: 400, depth: 300, openings: [], items: [] }]
+  };
+}
+
+/* Footprint: the axis-aligned box the item occupies once turned. */
+function footprint(it) {
+  return (it.r % 180) ? { w: it.d, d: it.w } : { w: it.w, d: it.d };
+}
+
+function uniqueName(name, items, skipId) {
+  let base = name.trim() || "Item", n = base, i = 2;
+  const taken = new Set(items.filter(x => x.id !== skipId).map(x => x.name.toLowerCase()));
+  while (taken.has(n.toLowerCase())) n = base + " " + i++;
+  return n;
+}
+
+function addItem(name, w, d, place) {
+  const r = room();
+  const it = {
+    id: newId(), name: uniqueName(name, r.items), w: Math.round(w), d: Math.round(d),
+    x: null, y: null, r: 0, placed: false, notes: ""
+  };
+  r.items.push(it);
+  if (place) placeItem(it);
+  return it;
+}
+
+/* Find the first free 10 cm slot, scanning rows, so Place never stacks
+   everything on the origin. Falls back to the origin if nothing is free. */
+function placeItem(it) {
+  const r = room(), fp = footprint(it);
+  for (let y = 0; y + fp.d <= r.depth; y += 10) {
+    for (let x = 0; x + fp.w <= r.width; x += 10) {
+      const box = { x, y, w: fp.w, d: fp.d };
+      if (!r.items.some(o => o !== it && o.placed && overlaps(box, boxOf(o)))) {
+        it.x = x; it.y = y; it.placed = true; return;
+      }
+    }
+  }
+  it.x = 0; it.y = 0; it.placed = true;
+}
+
+function boxOf(it) { const fp = footprint(it); return { x: it.x, y: it.y, w: fp.w, d: fp.d }; }
+
+function overlaps(a, b) {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.d && b.y < a.y + a.d;
+}
+
+/* Where an opening sits along its wall, as a line in room coordinates.
+   N and S are measured from the left wall, E and W from the top. */
+function openingLine(op, r) {
+  const o = op.offset, w = op.width;
+  if (op.wall === "N") return { x1: o, y1: 0, x2: o + w, y2: 0 };
+  if (op.wall === "S") return { x1: o, y1: r.depth, x2: o + w, y2: r.depth };
+  if (op.wall === "W") return { x1: 0, y1: o, x2: 0, y2: o + w };
+  return { x1: r.width, y1: o, x2: r.width, y2: o + w };
+}
+
+/* The quarter the door leaf sweeps, as a box. Coarse but honest: it is a
+   warning, not a physics engine. */
+function doorSweepBox(op, r) {
+  const l = openingLine(op, r), w = op.width;
+  const inward = op.swing !== "out";
+  if (op.wall === "N") return { x: l.x1, y: inward ? 0 : -w, w, d: w };
+  if (op.wall === "S") return { x: l.x1, y: inward ? r.depth - w : r.depth, w, d: w };
+  if (op.wall === "W") return { x: inward ? 0 : -w, y: l.y1, w, d: w };
+  return { x: inward ? r.width - w : r.width, y: l.y1, w, d: w };
+}
+
+/* Every reason an item is flagged, in words. Colour is never the sole signal. */
+function flagsFor(it) {
+  const r = room(), out = [];
+  if (!it.placed) return out;
+  const box = boxOf(it);
+  if (box.x < 0 || box.y < 0 || box.x + box.w > r.width || box.y + box.d > r.depth) {
+    out.push("outside the room");
+  }
+  const hits = r.items.filter(o => o !== it && o.placed && overlaps(box, boxOf(o))).map(o => o.name);
+  if (hits.length) out.push("overlaps " + hits.join(", "));
+  const doors = r.openings.filter(op => op.kind === "door" && overlaps(box, doorSweepBox(op, r)));
+  if (doors.length) out.push("blocks the door");
+  return out;
+}
+
+function pushUndo() {
+  undoStack.push(JSON.stringify(model));
+  if (undoStack.length > UNDO_CAP) undoStack.shift();
+}
+
+function undo() {
+  const prev = undoStack.pop();
+  if (!prev) { say("canvas-status", "Nothing to undo."); return; }
+  model = JSON.parse(prev);
+  selectedId = null; selectedOpening = -1;
+  renderAll(); save();
+  say("canvas-status", "Undone.");
+}
+
+function say(id, text, warn) {
+  const el = $(id);
+  el.textContent = text || "";
+  el.classList.toggle("is-warn", !!warn);
+}
+
+/* --- markdown ------------------------------------------------------------
+   The table is the canonical form, deliberately. The whole point is that
+   someone can edit a row by hand in an email and send it back, and two
+   representations diverge the moment they do. Everything the tool needs
+   fits in a row.
+   ------------------------------------------------------------------------- */
+
+function serialiseRoom(r, level) {
+  const h = level === 2 ? "## " : "# Room plan: ";
+  const out = [h + r.name, "", "Room: " + r.width + " × " + r.depth + " cm", ""];
+
+  if (r.openings.length) {
+    out.push("| Opening | Wall | From | Width | Swing | Hinge |");
+    out.push("|---|---|---|---|---|---|");
+    r.openings.forEach(op => {
+      const door = op.kind === "door";
+      out.push("| " + [
+        door ? "Door" : "Window", op.wall, op.offset, op.width,
+        door ? (op.swing || "in") : "", door ? (op.hinge || "left") : ""
+      ].join(" | ") + " |");
+    });
+    out.push("");
+  }
+
+  out.push("| Item | Width | Depth | X | Y | Rotation | Notes |");
+  out.push("|---|---|---|---|---|---|---|");
+  r.items.forEach(it => {
+    out.push("| " + [
+      it.name, it.w, it.d,
+      it.placed ? it.x : "", it.placed ? it.y : "", it.placed ? it.r : "",
+      it.notes || ""
+    ].join(" | ") + " |");
+  });
+  return out.join("\n");
+}
+
+function serialise(rooms, title) {
+  if (rooms.length === 1) {
+    return serialiseRoom(rooms[0], 1) + "\n\n" + footerLine();
+  }
+  const out = ["# Room plans: " + (title || "House"), ""];
+  rooms.forEach(r => { out.push(serialiseRoom(r, 2), ""); });
+  out.push(footerLine());
+  return out.join("\n");
+}
+
+function footerLine() {
+  const d = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  return "Room planner · sizes in cm · X and Y from the top-left corner · " + d;
+}
+
+/* Normalise before parsing. Written for text that has been through WhatsApp,
+   Notes and Mail, not for well-formed GitHub Markdown. */
+function normalise(text) {
+  return String(text)
+    .replace(/\r\n?/g, "\n")
+    .replace(/[   ]/g, " ")
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[×✕✖*]/g, "x")
+    .replace(/[–—]/g, "-");
+}
+
+function cells(line) {
+  let s = line.trim();
+  if (s.startsWith("|")) s = s.slice(1);
+  if (s.endsWith("|")) s = s.slice(0, -1);
+  return s.split("|").map(c => c.trim());
+}
+
+function isAlignmentRow(cs) {
+  return cs.length > 1 && cs.every(c => /^:?-{1,}:?$/.test(c.replace(/\s/g, "")) || c === "");
+}
+
+function blank(c) { return c === "" || c === "-" || c === "n/a" || c === "—"; }
+
+function num(c) {
+  if (blank(c)) return null;
+  const m = String(c).replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+  return m ? parseFloat(m[0]) : null;
+}
+
+/* Map a header row to column indices by name, so column order and any extra
+   columns someone has added do not matter. */
+function headerMap(cs) {
+  const map = {};
+  cs.forEach((c, i) => {
+    const k = c.toLowerCase().replace(/[^a-z]/g, "");
+    if (/^(item|name|furniture)$/.test(k)) map.name = i;
+    else if (/^(width|w|wide)$/.test(k)) map.width = i;
+    else if (/^(depth|d|deep|length|long)$/.test(k)) map.depth = i;
+    else if (k === "x") map.x = i;
+    else if (k === "y") map.y = i;
+    else if (/^(rotation|rot|turn|r|angle)$/.test(k)) map.rot = i;
+    else if (/^(notes?|comment)$/.test(k)) map.notes = i;
+    else if (/^(opening|type|kind)$/.test(k)) map.kind = i;
+    else if (/^(wall|side)$/.test(k)) map.wall = i;
+    else if (/^(from|offset|along|position)$/.test(k)) map.offset = i;
+    else if (/^(swing|swings|opens)$/.test(k)) map.swing = i;
+    else if (/^(hinge|hinged)$/.test(k)) map.hinge = i;
+  });
+  return map;
+}
+
+function wallLetter(c) {
+  const k = String(c).trim().toLowerCase();
+  if (/^n|top|back$/.test(k)) return "N";
+  if (/^e|right$/.test(k)) return "E";
+  if (/^s|bottom|front$/.test(k)) return "S";
+  if (/^w|left$/.test(k)) return "W";
+  return null;
+}
+
+/* Parse a whole document into rooms. Never throws on a bad row: it collects
+   what it can and reports what it skipped. */
+function parsePlan(text) {
+  const lines = normalise(text).split("\n");
+  const skipped = [];
+  const rooms = [];
+  let title = null;
+
+  // Split into sections at any heading. Text before the first heading is a
+  // section too, so a pasted fragment with no heading still parses.
+  const sections = [];
+  let cur = { heading: null, lines: [] };
+  lines.forEach(line => {
+    const h = line.match(/^\s{0,3}(#{1,6})\s+(.*)$/);
+    if (h) { sections.push(cur); cur = { heading: h[2].trim(), level: h[1].length, lines: [] }; }
+    else cur.lines.push(line);
+  });
+  sections.push(cur);
+
+  sections.forEach(sec => {
+    const body = sec.lines.join("\n");
+    const rm = body.match(/^[ \t]*room\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*(m|cm)?\s*x\s*(\d+(?:\.\d+)?)\s*(m|cm)?/im);
+    if (!rm) {
+      // A heading with no Room: line is the document title, e.g. "Room plans: 14 Somewhere Road".
+      if (sec.heading && !title) title = sec.heading.replace(/^room plans?\s*:\s*/i, "").trim();
+      return;
+    }
+    const unit = (rm[4] || rm[2] || "cm").toLowerCase();
+    const scale = unit === "m" ? 100 : 1;
+    const width = Math.round(parseFloat(rm[1]) * scale);
+    const depth = Math.round(parseFloat(rm[3]) * scale);
+
+    // A pasted fragment often loses its heading marker, leaving a bare
+    // "Room plan: Bedroom 1" line, so look for that before giving up on a name.
+    let heading = sec.heading;
+    if (!heading) {
+      const nm = body.match(/^[ \t]*room plans?\s*[:\-]\s*(.+)$/im);
+      if (nm) heading = nm[1];
+    }
+    const name = (heading || "Untitled room").replace(/^room plans?\s*:\s*/i, "").trim() || "Untitled room";
+    const r = { id: newId(), name, width, depth, openings: [], items: [] };
+
+    let map = null, mode = null;
+    sec.lines.forEach((line, i) => {
+      if ((line.match(/\|/g) || []).length < 2) return;
+      const cs = cells(line);
+      if (isAlignmentRow(cs)) return;
+
+      const asHeader = headerMap(cs);
+      if (asHeader.width !== undefined && asHeader.depth !== undefined) {
+        map = asHeader; mode = "items"; return;
+      }
+      if (asHeader.wall !== undefined && asHeader.width !== undefined) {
+        map = asHeader; mode = "openings"; return;
+      }
+      if (!map) return;
+
+      const at = (k) => (map[k] === undefined ? "" : (cs[map[k]] || ""));
+
+      if (mode === "items") {
+        const nm = at("name");
+        const w = num(at("width")), d = num(at("depth"));
+        if (!nm || blank(nm)) { skipped.push("row " + (i + 1) + ": no name"); return; }
+        if (w === null || d === null || w <= 0 || d <= 0) {
+          skipped.push("row " + (i + 1) + ": no size for " + nm); return;
+        }
+        const x = num(at("x")), y = num(at("y"));
+        const rot = num(at("rot"));
+        const placed = x !== null && y !== null;
+        r.items.push({
+          id: newId(), name: uniqueName(nm, r.items), w: Math.round(w), d: Math.round(d),
+          x: placed ? Math.round(x) : null, y: placed ? Math.round(y) : null,
+          r: rot === null ? 0 : ((Math.round(rot / 90) * 90) % 360 + 360) % 360,
+          placed, notes: blank(at("notes")) ? "" : at("notes")
+        });
+      } else {
+        const wall = wallLetter(at("wall"));
+        const off = num(at("offset")), w = num(at("width"));
+        if (!wall || off === null || w === null) { skipped.push("opening row " + (i + 1)); return; }
+        const kind = /window/i.test(at("kind")) ? "window" : "door";
+        const op = { kind, wall, offset: Math.round(off), width: Math.round(w) };
+        if (kind === "door") {
+          op.swing = /out/i.test(at("swing")) ? "out" : "in";
+          op.hinge = /right/i.test(at("hinge")) ? "right" : "left";
+        }
+        r.openings.push(op);
+      }
+    });
+
+    rooms.push(r);
+  });
+
+  return { rooms, skipped, title };
+}
+
+
+/* --- render --------------------------------------------------------------
+   One inline SVG with a viewBox in centimetres, so 1 user unit = 1 cm and no
+   scaling arithmetic appears anywhere else in the file.
+   ------------------------------------------------------------------------- */
+
+const SVGNS = "http://www.w3.org/2000/svg";
+
+function el(name, attrs, text) {
+  const n = document.createElementNS(SVGNS, name);
+  for (const k in attrs) if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, attrs[k]);
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+function renderPlan() {
+  const r = room();
+  const vw = r.width + MARGIN * 2, vh = r.depth + MARGIN * 2;
+  svg.setAttribute("viewBox", (-MARGIN) + " " + (-MARGIN) + " " + vw + " " + vh);
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  const fs = Math.max(8, Math.min(14, vw / 45));   // label size in cm units
+
+  // Grid, clipped to the floor, drawn as two pattern layers.
+  const defs = el("defs");
+  const p10 = el("pattern", { id: "g10", width: 10, height: 10, patternUnits: "userSpaceOnUse" });
+  p10.appendChild(el("path", { d: "M10 0 H0 V10", class: "grid-10", "vector-effect": "non-scaling-stroke" }));
+  const p100 = el("pattern", { id: "g100", width: 100, height: 100, patternUnits: "userSpaceOnUse" });
+  p100.appendChild(el("path", { d: "M100 0 H0 V100", class: "grid-100", "vector-effect": "non-scaling-stroke" }));
+  defs.appendChild(p10); defs.appendChild(p100);
+  svg.appendChild(defs);
+
+  svg.appendChild(el("rect", { x: 0, y: 0, width: r.width, height: r.depth, class: "room-floor" }));
+  if (model.settings.grid) {
+    svg.appendChild(el("rect", { x: 0, y: 0, width: r.width, height: r.depth, fill: "url(#g10)", stroke: "none" }));
+    svg.appendChild(el("rect", { x: 0, y: 0, width: r.width, height: r.depth, fill: "url(#g100)", stroke: "none" }));
+  }
+  svg.appendChild(el("rect", {
+    x: 0, y: 0, width: r.width, height: r.depth, class: "room-wall",
+    "vector-effect": "non-scaling-stroke"
+  }));
+
+  renderDimensions(r, fs);
+  r.items.filter(it => it.placed).forEach(it => renderItem(it, fs));
+  // Openings are drawn last so a wardrobe pushed against a window never hides
+  // the fact that there is a window behind it. That is the whole question the
+  // plan is being used to answer.
+  r.openings.forEach((op, i) => renderOpening(op, i, r));
+
+  $("plan-caption").textContent = r.name + " · " + metres(r.width) + " × " + metres(r.depth);
+  svg.setAttribute("aria-label", r.name + ", " + metres(r.width) + " by " + metres(r.depth)
+    + ", " + r.items.filter(i => i.placed).length + " items placed");
+}
+
+function renderDimensions(r, fs) {
+  const g = el("g", { "aria-hidden": "true" });
+  const off = 26, tick = 8;
+  // Top edge
+  g.appendChild(el("line", { x1: 0, y1: -off, x2: r.width, y2: -off, class: "dim-line", "vector-effect": "non-scaling-stroke" }));
+  g.appendChild(el("line", { x1: 0, y1: -off - tick / 2, x2: 0, y2: -off + tick / 2, class: "dim-line", "vector-effect": "non-scaling-stroke" }));
+  g.appendChild(el("line", { x1: r.width, y1: -off - tick / 2, x2: r.width, y2: -off + tick / 2, class: "dim-line", "vector-effect": "non-scaling-stroke" }));
+  const tw = el("text", { x: r.width / 2, y: -off - 8, class: "dim-text", "text-anchor": "middle", "font-size": fs }, metres(r.width));
+  g.appendChild(tw);
+  // Left edge
+  g.appendChild(el("line", { x1: -off, y1: 0, x2: -off, y2: r.depth, class: "dim-line", "vector-effect": "non-scaling-stroke" }));
+  g.appendChild(el("line", { x1: -off - tick / 2, y1: 0, x2: -off + tick / 2, y2: 0, class: "dim-line", "vector-effect": "non-scaling-stroke" }));
+  g.appendChild(el("line", { x1: -off - tick / 2, y1: r.depth, x2: -off + tick / 2, y2: r.depth, class: "dim-line", "vector-effect": "non-scaling-stroke" }));
+  const td = el("text", { x: -off - 8, y: r.depth / 2, class: "dim-text", "text-anchor": "middle", "font-size": fs,
+    transform: "rotate(-90 " + (-off - 8) + " " + (r.depth / 2) + ")" }, metres(r.depth));
+  g.appendChild(td);
+  svg.appendChild(g);
+}
+
+function renderOpening(op, i, r) {
+  const l = openingLine(op, r);
+  const g = el("g", { class: "opening", "data-op": i });
+
+  // Knock the wall out under the opening, then draw the opening itself.
+  g.appendChild(el("line", { x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, class: "opening-gap", "vector-effect": "non-scaling-stroke" }));
+
+  if (op.kind === "window") {
+    g.appendChild(el("line", { x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, class: "opening-window", "vector-effect": "non-scaling-stroke" }));
+  } else {
+    // Hinge at one end; leaf swings a quarter circle into or out of the room.
+    const horiz = op.wall === "N" || op.wall === "S";
+    const atStart = op.hinge !== "right";
+    const hx = horiz ? (atStart ? l.x1 : l.x2) : l.x1;
+    const hy = horiz ? l.y1 : (atStart ? l.y1 : l.y2);
+    const w = op.width;
+    const inward = op.swing !== "out";
+    // Direction the leaf ends up pointing, perpendicular to the wall.
+    let dy = 0, dx = 0;
+    if (op.wall === "N") dy = inward ? w : -w;
+    else if (op.wall === "S") dy = inward ? -w : w;
+    else if (op.wall === "W") dx = inward ? w : -w;
+    else dx = inward ? -w : w;
+    const ex = hx + dx, ey = hy + dy;
+    g.appendChild(el("line", { x1: hx, y1: hy, x2: ex, y2: ey, class: "opening-leaf", "vector-effect": "non-scaling-stroke" }));
+    // Arc from the far jamb round to the open leaf tip.
+    const jx = horiz ? (atStart ? l.x2 : l.x1) : l.x1;
+    const jy = horiz ? l.y1 : (atStart ? l.y2 : l.y1);
+    g.appendChild(el("path", {
+      d: "M " + jx + " " + jy + " A " + w + " " + w + " 0 0 1 " + ex + " " + ey,
+      class: "opening-arc", "vector-effect": "non-scaling-stroke"
+    }));
+  }
+
+  const hit = el("line", { x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, class: "opening-hit" });
+  hit.addEventListener("pointerdown", (e) => { e.stopPropagation(); selectOpening(i); });
+  g.appendChild(hit);
+  svg.appendChild(g);
+}
+
+function renderItem(it, fs) {
+  const fp = footprint(it);
+  const flags = flagsFor(it);
+  const g = el("g", {
+    class: "item" + (it.id === selectedId ? " is-selected" : "") + (flags.length ? " is-flagged" : ""),
+    "data-id": it.id, tabindex: "0", role: "button",
+    "aria-label": it.name + ", " + it.w + " by " + it.d + " centimetres, at " + it.x + ", " + it.y
+      + (it.r ? ", turned " + it.r + " degrees" : "")
+      + (flags.length ? ", " + flags.join(", ") : "")
+  });
+  g.appendChild(el("rect", { x: it.x - 3, y: it.y - 3, width: fp.w + 6, height: fp.d + 6, class: "focus-ring", "vector-effect": "non-scaling-stroke" }));
+  g.appendChild(el("rect", { x: it.x, y: it.y, width: fp.w, height: fp.d, class: "body", "vector-effect": "non-scaling-stroke" }));
+
+  const cx = it.x + fp.w / 2, cy = it.y + fp.d / 2;
+  // Only label when there is room for the text to sit inside the shape.
+  if (fp.w > fs * 3 && fp.d > fs * 2.4) {
+    const name = el("text", { x: cx, y: cy - fs * 0.15, class: "name", "text-anchor": "middle",
+      "font-size": fs }, it.name);
+    const dims = el("text", { x: cx, y: cy + fs * 1.05, class: "dims", "text-anchor": "middle",
+      "font-size": fs * 0.8 }, it.w + " × " + it.d);
+    g.appendChild(name); g.appendChild(dims);
+    svg.appendChild(g);
+    fitText(name, fp.w - 8, fs);
+    fitText(dims, fp.w - 8, fs * 0.8);
+    return;
+  }
+  svg.appendChild(g);
+}
+
+/* Keep a label inside its shape: shrink a little first, then cut the name and
+   add an ellipsis. A label that spills over the next item is worse than a
+   short one, and the side list always carries the full name. */
+function fitText(node, maxWidth, size) {
+  if (node.getComputedTextLength() <= maxWidth) return;
+  const min = size * 0.7;
+  let s = size;
+  while (s > min && node.getComputedTextLength() > maxWidth) {
+    s -= size * 0.05;
+    node.setAttribute("font-size", s);
+  }
+  let text = node.textContent;
+  while (text.length > 2 && node.getComputedTextLength() > maxWidth) {
+    text = text.slice(0, -1);
+    node.textContent = text.replace(/[\s,]+$/, "") + "…";
+  }
+}
+
+
+/* --- pointer -------------------------------------------------------------- */
+
+function svgPoint(evt) {
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return { x: 0, y: 0 };
+  const p = new DOMPoint(evt.clientX, evt.clientY).matrixTransform(ctm.inverse());
+  return { x: p.x, y: p.y };
+}
+
+function snap(v, fine) {
+  const step = fine ? 1 : model.settings.snap;
+  return Math.round(v / step) * step;
+}
+
+let drag = null;
+
+svg.addEventListener("pointerdown", (evt) => {
+  const g = evt.target.closest ? evt.target.closest("g.item") : null;
+  if (!g) { if (!evt.target.closest || !evt.target.closest("g.opening")) select(null); return; }
+  const it = room().items.find(i => i.id === g.dataset.id);
+  if (!it) return;
+  select(it.id);
+  const p = svgPoint(evt);
+  drag = { id: it.id, dx: p.x - it.x, dy: p.y - it.y, moved: false, from: JSON.stringify(model) };
+  g.classList.add("is-dragging");
+  g.setPointerCapture(evt.pointerId);
+  evt.preventDefault();
+});
+
+svg.addEventListener("pointermove", (evt) => {
+  if (!drag) return;
+  const it = room().items.find(i => i.id === drag.id);
+  if (!it) return;
+  const p = svgPoint(evt);
+  const nx = snap(p.x - drag.dx, evt.altKey), ny = snap(p.y - drag.dy, evt.altKey);
+  if (nx === it.x && ny === it.y) return;
+  if (!drag.moved) { undoStack.push(drag.from); if (undoStack.length > UNDO_CAP) undoStack.shift(); drag.moved = true; }
+  it.x = nx; it.y = ny;
+  renderPlan(); renderItemRows();
+});
+
+function endDrag(evt) {
+  if (!drag) return;
+  const g = svg.querySelector('g.item[data-id="' + drag.id + '"]');
+  if (g) { g.classList.remove("is-dragging"); try { g.releasePointerCapture(evt.pointerId); } catch (e) {} }
+  if (drag.moved) { save(); announceSelection(); }
+  drag = null;
+}
+svg.addEventListener("pointerup", endDrag);
+svg.addEventListener("pointercancel", endDrag);
+
+/* --- keyboard ------------------------------------------------------------- */
+
+function inField(t) { return t && t.closest && t.closest("input,textarea,select,summary"); }
+
+document.addEventListener("keydown", (evt) => {
+  if (inField(evt.target)) return;
+  const mod = evt.metaKey || evt.ctrlKey;
+
+  if (mod && evt.key.toLowerCase() === "z") { evt.preventDefault(); undo(); return; }
+  if (mod && evt.key.toLowerCase() === "d") { evt.preventDefault(); duplicateSelected(); return; }
+  if (evt.key === "Escape") { select(null); return; }
+
+  const it = selectedItem();
+  if (!it) return;
+
+  if (evt.key.toLowerCase() === "r") { evt.preventDefault(); rotateSelected(); return; }
+  if (evt.key === "Delete" || evt.key === "Backspace") { evt.preventDefault(); deleteSelected(); return; }
+
+  const step = evt.shiftKey ? 10 : 1;
+  let dx = 0, dy = 0;
+  if (evt.key === "ArrowLeft") dx = -step;
+  else if (evt.key === "ArrowRight") dx = step;
+  else if (evt.key === "ArrowUp") dy = -step;
+  else if (evt.key === "ArrowDown") dy = step;
+  else return;
+  evt.preventDefault();
+  if (!it.placed) return;
+  pushUndo();
+  it.x += dx; it.y += dy;
+  renderAll(); save(); announceSelection();
+});
+
+/* --- selection and item actions ------------------------------------------- */
+
+function selectedItem() { return room().items.find(i => i.id === selectedId) || null; }
+
+function select(id, focusCanvas) {
+  selectedId = id;
+  if (id) selectedOpening = -1;
+  renderPlan(); renderItemRows(); renderSelectedForm(); renderOpeningRows();
+  if (focusCanvas && id) {
+    const g = svg.querySelector('g.item[data-id="' + id + '"]');
+    if (g) g.focus();
+  }
+  announceSelection();
+}
+
+function selectOpening(i) {
+  selectedOpening = i; selectedId = null;
+  renderPlan(); renderItemRows(); renderSelectedForm(); renderOpeningRows();
+  const r = room(), op = r.openings[i];
+  if (op) say("canvas-status", (op.kind === "door" ? "Door" : "Window") + " on the "
+    + wallName(op.wall) + " wall, " + op.width + " cm wide.");
+}
+
+function wallName(w) {
+  return { N: "north", E: "east", S: "south", W: "west" }[w] || w;
+}
+
+function announceSelection() {
+  const it = selectedItem();
+  if (!it) { say("canvas-status", ""); return; }
+  const flags = flagsFor(it);
+  say("canvas-status",
+    it.name + " · " + it.w + " × " + it.d + " cm"
+    + (it.placed ? " · at " + it.x + ", " + it.y : " · not placed")
+    + (it.r ? " · turned " + it.r + "°" : "")
+    + (flags.length ? " · " + flags.join(" · ") : ""),
+    flags.length > 0);
+}
+
+function rotateSelected() {
+  const it = selectedItem();
+  if (!it) { say("canvas-status", "Select an item first."); return; }
+  pushUndo();
+  it.r = (it.r + 90) % 360;
+  renderAll(); save(); announceSelection();
+}
+
+function duplicateSelected() {
+  const it = selectedItem();
+  if (!it) { say("canvas-status", "Select an item first."); return; }
+  pushUndo();
+  const r = room();
+  const copy = Object.assign({}, it, {
+    id: newId(), name: uniqueName(it.name, r.items),
+    x: it.placed ? it.x + 10 : null, y: it.placed ? it.y + 10 : null
+  });
+  r.items.push(copy);
+  selectedId = copy.id;
+  renderAll(); save(); announceSelection();
+}
+
+function deleteSelected() {
+  const it = selectedItem();
+  if (!it) { say("canvas-status", "Select an item first."); return; }
+  pushUndo();
+  const r = room();
+  r.items = r.items.filter(i => i.id !== it.id);
+  selectedId = null;
+  renderAll(); save();
+  say("canvas-status", it.name + " removed. Cmd + Z puts it back.");
+}
+
+
+/* --- panel ---------------------------------------------------------------- */
+
+function renderItemRows() {
+  const r = room(), ul = $("item-rows");
+  ul.textContent = "";
+  if (!r.items.length) {
+    const li = document.createElement("li");
+    const p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "Nothing on the list yet. Add an item below, or open Common sizes.";
+    li.appendChild(p);
+    ul.appendChild(li);
+    return;
+  }
+  r.items.forEach(it => {
+    const li = document.createElement("li");
+    if (it.id === selectedId) li.className = "is-selected";
+    const flags = flagsFor(it);
+
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "row-main";
+    const n = document.createElement("span"); n.className = "row-name"; n.textContent = it.name;
+    const m = document.createElement("span"); m.className = "row-meta";
+    m.textContent = it.w + " × " + it.d + " cm" + (it.r ? " · turned " + it.r + "°" : "")
+      + (it.placed ? "" : " · not placed");
+    b.appendChild(n); b.appendChild(m);
+    if (flags.length) {
+      const f = document.createElement("span");
+      f.className = "row-meta row-flag"; f.textContent = flags.join(" · ");
+      b.appendChild(f);
+    }
+    b.addEventListener("click", () => select(it.id, true));
+
+    const t = document.createElement("button");
+    t.type = "button"; t.className = "btn-small ghost";
+    t.textContent = it.placed ? "Remove" : "Place";
+    t.setAttribute("aria-label", (it.placed ? "Take " : "Place ") + it.name
+      + (it.placed ? " off the plan" : " on the plan"));
+    t.addEventListener("click", () => {
+      pushUndo();
+      if (it.placed) { it.placed = false; it.x = null; it.y = null; }
+      else placeItem(it);
+      selectedId = it.id;
+      renderAll(); save(); announceSelection();
+    });
+
+    li.appendChild(b); li.appendChild(t);
+    ul.appendChild(li);
+  });
+}
+
+function renderOpeningRows() {
+  const r = room(), ul = $("opening-rows");
+  ul.textContent = "";
+  r.openings.forEach((op, i) => {
+    const li = document.createElement("li");
+    if (i === selectedOpening) li.className = "is-selected";
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "row-main";
+    const n = document.createElement("span"); n.className = "row-name";
+    n.textContent = op.kind === "door" ? "Door" : "Window";
+    const m = document.createElement("span"); m.className = "row-meta";
+    m.textContent = wallName(op.wall) + " wall · " + op.width + " cm · " + op.offset + " cm from the corner"
+      + (op.kind === "door" ? " · swings " + (op.swing === "out" ? "out" : "in") : "");
+    b.appendChild(n); b.appendChild(m);
+    b.addEventListener("click", () => selectOpening(i));
+
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "btn-small ghost";
+    del.textContent = "Remove";
+    del.setAttribute("aria-label", "Remove the " + op.kind + " on the " + wallName(op.wall) + " wall");
+    del.addEventListener("click", () => {
+      pushUndo();
+      r.openings.splice(i, 1);
+      selectedOpening = -1;
+      renderAll(); save();
+    });
+
+    li.appendChild(b); li.appendChild(del);
+    ul.appendChild(li);
+  });
+}
+
+function renderPresetRows() {
+  const ul = $("preset-rows");
+  ul.textContent = "";
+  PRESETS.forEach(([name, w, d]) => {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "row-main";
+    const n = document.createElement("span"); n.className = "row-name"; n.textContent = name;
+    const m = document.createElement("span"); m.className = "row-meta"; m.textContent = w + " × " + d + " cm";
+    b.appendChild(n); b.appendChild(m);
+    const onAdd = () => {
+      pushUndo();
+      const it = addItem(name, w, d, true);
+      selectedId = it.id;
+      renderAll(); save();
+      say("canvas-status", it.name + " added and placed.");
+    };
+    b.addEventListener("click", onAdd);
+    const add = document.createElement("button");
+    add.type = "button"; add.className = "btn-small";
+    add.textContent = "Add";
+    add.setAttribute("aria-label", "Add a " + name + " to the plan");
+    add.addEventListener("click", onAdd);
+    li.appendChild(b); li.appendChild(add);
+    ul.appendChild(li);
+  });
+}
+
+function renderSelectedForm() {
+  const it = selectedItem();
+  const sec = $("selected-section");
+  if (!it) { sec.hidden = true; return; }
+  sec.hidden = false;
+  $("sel-name").value = it.name;
+  $("sel-w").value = it.w;
+  $("sel-d").value = it.d;
+  $("sel-x").value = it.placed ? it.x : "";
+  $("sel-y").value = it.placed ? it.y : "";
+  $("sel-r").value = String(it.r);
+  $("sel-notes").value = it.notes || "";
+}
+
+function renderRoomForm() {
+  const r = room();
+  $("room-name").value = r.name;
+  $("room-width").value = r.width;
+  $("room-depth").value = r.depth;
+}
+
+function renderAll() {
+  renderPlan();
+  renderItemRows();
+  renderOpeningRows();
+  renderSelectedForm();
+  renderRoomForm();
+}
+
+/* Form wiring. Everything edits the model live and saves debounced; an undo
+   snapshot is pushed on the first keystroke of a run, not every keystroke. */
+
+let editingRun = false;
+function beginEdit() { if (!editingRun) { pushUndo(); editingRun = true; } }
+document.addEventListener("focusout", () => { editingRun = false; });
+
+function onInput(id, fn) {
+  const e = $(id);
+  e.addEventListener("input", () => { beginEdit(); fn(e.value); save(); });
+}
+
+function wirePanel() {
+  onInput("room-name", v => { room().name = v || "Untitled room"; renderPlan(); });
+  onInput("room-width", v => { const n = parseInt(v, 10); if (n > 0) { room().width = n; renderAll(); } });
+  onInput("room-depth", v => { const n = parseInt(v, 10); if (n > 0) { room().depth = n; renderAll(); } });
+
+  onInput("sel-name", v => { const it = selectedItem(); if (it) { it.name = v; renderPlan(); renderItemRows(); } });
+  onInput("sel-w", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && n > 0) { it.w = n; renderPlan(); renderItemRows(); } });
+  onInput("sel-d", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && n > 0) { it.d = n; renderPlan(); renderItemRows(); } });
+  onInput("sel-x", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && !isNaN(n)) { it.x = n; it.placed = true; renderPlan(); renderItemRows(); } });
+  onInput("sel-y", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && !isNaN(n)) { it.y = n; it.placed = true; renderPlan(); renderItemRows(); } });
+  onInput("sel-r", v => { const it = selectedItem(); if (it) { it.r = parseInt(v, 10) || 0; renderPlan(); renderItemRows(); } });
+  onInput("sel-notes", v => { const it = selectedItem(); if (it) it.notes = v; });
+
+  $("add-item").addEventListener("click", () => {
+    const name = $("add-name").value.trim();
+    const w = parseInt($("add-w").value, 10), d = parseInt($("add-d").value, 10);
+    if (!name) { say("canvas-status", "Give the item a name first.", true); $("add-name").focus(); return; }
+    if (!(w > 0) || !(d > 0)) { say("canvas-status", "Give the item a width and a depth in centimetres.", true); return; }
+    pushUndo();
+    const it = addItem(name, w, d, true);
+    selectedId = it.id;
+    $("add-name").value = ""; $("add-w").value = ""; $("add-d").value = "";
+    renderAll(); save();
+    say("canvas-status", it.name + " added and placed.");
+    $("add-name").focus();
+  });
+  ["add-name", "add-w", "add-d"].forEach(id => {
+    $(id).addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("add-item").click(); } });
+  });
+
+  $("op-kind").addEventListener("change", () => {
+    $("op-door-fields").hidden = $("op-kind").value !== "door";
+  });
+  $("op-add").addEventListener("click", () => {
+    const r = room();
+    const kind = $("op-kind").value, wall = $("op-wall").value;
+    const offset = parseInt($("op-offset").value, 10), width = parseInt($("op-width").value, 10);
+    if (isNaN(offset) || !(width > 0)) { say("canvas-status", "Give the opening a position and a width.", true); return; }
+    pushUndo();
+    const op = { kind, wall, offset, width };
+    if (kind === "door") { op.swing = $("op-swing").value; op.hinge = $("op-hinge").value; }
+    r.openings.push(op);
+    renderAll(); save();
+    say("canvas-status", (kind === "door" ? "Door" : "Window") + " added to the " + wallName(wall) + " wall.");
+  });
+
+  $("btn-grid").addEventListener("click", () => {
+    model.settings.grid = !model.settings.grid;
+    $("btn-grid").setAttribute("aria-pressed", String(model.settings.grid));
+    renderPlan(); save();
+  });
+  $("btn-snap").addEventListener("click", () => {
+    model.settings.snap = model.settings.snap === 5 ? 1 : 5;
+    $("btn-snap").textContent = "Snap " + model.settings.snap + " cm";
+    $("btn-snap").setAttribute("aria-pressed", String(model.settings.snap === 5));
+    save();
+  });
+  $("btn-rotate").addEventListener("click", rotateSelected);
+  $("btn-duplicate").addEventListener("click", duplicateSelected);
+  $("btn-delete").addEventListener("click", deleteSelected);
+  $("btn-undo").addEventListener("click", undo);
+}
+
+
+/* --- share ---------------------------------------------------------------- */
+
+function currentMarkdown() { return serialise([room()]); }
+
+function flash(btn, label) {
+  const old = btn.textContent;
+  btn.textContent = label;
+  btn.classList.add("is-done");
+  setTimeout(() => { btn.textContent = old; btn.classList.remove("is-done"); }, 2000);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function fileStem() {
+  return (room().name || "room-plan").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "room-plan";
+}
+
+/* Take the live SVG and make a standalone one: literal colours instead of
+   custom properties, a paper rectangle behind everything, and a system font
+   stack, because the web fonts the page loaded are not available to an image
+   decoded from an SVG blob. */
+function exportableSVG(scale) {
+  const cs = getComputedStyle(document.documentElement);
+  const v = (n) => cs.getPropertyValue(n).trim();
+  const clone = svg.cloneNode(true);
+
+  clone.querySelectorAll(".focus-ring, .opening-hit").forEach(n => n.remove());
+  clone.querySelectorAll(".is-selected").forEach(n => n.classList.remove("is-selected"));
+
+  const map = [
+    [".grid-10", { stroke: v("--grid"), fill: "none" }],
+    [".grid-100", { stroke: v("--rule-faint"), fill: "none" }],
+    [".room-floor", { fill: v("--paper") }],
+    [".room-wall", { fill: "none", stroke: v("--ink"), "stroke-width": "2" }],
+    [".dim-line", { stroke: v("--ink-faint"), "stroke-width": "1" }],
+    [".dim-text", { fill: v("--ink-muted") }],
+    [".opening-window", { stroke: v("--blue"), "stroke-width": "4", fill: "none" }],
+    [".opening-gap", { stroke: v("--paper"), "stroke-width": "4", fill: "none" }],
+    [".opening-leaf", { stroke: v("--ink-muted"), "stroke-width": "1.5", fill: "none" }],
+    [".opening-arc", { stroke: v("--ink-faint"), "stroke-width": "1", fill: "none", "stroke-dasharray": "6 5" }],
+    [".item rect.body", { fill: v("--paper-tint"), stroke: v("--ink"), "stroke-width": "1" }],
+    [".item.is-flagged rect.body", { stroke: v("--berry"), "stroke-dasharray": "7 4" }],
+    [".item .name", { fill: v("--ink") }],
+    [".item.is-flagged .name", { fill: v("--berry-ink") }],
+    [".item .dims", { fill: v("--ink-muted") }]
+  ];
+  map.forEach(([sel, attrs]) => {
+    clone.querySelectorAll(sel).forEach(n => {
+      for (const k in attrs) n.setAttribute(k, attrs[k]);
+    });
+  });
+  const sys = 'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif';
+  clone.querySelectorAll("text").forEach(n => {
+    n.setAttribute("font-family", sys);
+    if (n.classList.contains("dim-text") || n.classList.contains("dims")) {
+      n.setAttribute("letter-spacing", "0.6");
+    }
+  });
+  clone.querySelectorAll("[class]").forEach(n => n.removeAttribute("class"));
+
+  const vb = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+  const bg = document.createElementNS(SVGNS, "rect");
+  bg.setAttribute("x", vb[0]); bg.setAttribute("y", vb[1]);
+  bg.setAttribute("width", vb[2]); bg.setAttribute("height", vb[3]);
+  bg.setAttribute("fill", v("--paper"));
+  clone.insertBefore(bg, clone.firstChild);
+
+  const px = Math.round(vb[2] * scale);
+  clone.setAttribute("width", px);
+  clone.setAttribute("height", Math.round(vb[3] * scale));
+  clone.setAttribute("xmlns", SVGNS);
+  clone.removeAttribute("style");
+  return { markup: new XMLSerializer().serializeToString(clone), w: px, h: Math.round(vb[3] * scale) };
+}
+
+function planPNG() {
+  return new Promise((resolve, reject) => {
+    const vb = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+    const scale = Math.max(1.5, Math.min(6, 1600 / vb[2]));
+    const { markup, w, h } = exportableSVG(scale);
+    const blob = new Blob([markup], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = w * 2; c.height = h * 2;
+      const ctx = c.getContext("2d");
+      ctx.scale(2, 2);
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? resolve(b) : reject(new Error("no blob")), "image/png");
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image failed")); };
+    img.src = url;
+  });
+}
+
+function loadMarkdown(text, source) {
+  const res = parsePlan(text);
+  if (!res.rooms.length) {
+    say("share-status", "That doesn't look like a room plan. It needs a line reading "
+      + "'Room: 400 x 300 cm' and a table of items.", true);
+    return false;
+  }
+  pushUndo();
+  const first = res.rooms[0];
+  const existing = model.rooms.find(r => r.name.toLowerCase() === first.name.toLowerCase());
+  if (existing && !confirm("Replace your '" + existing.name + "' with the pasted one?")) {
+    say("share-status", "Nothing loaded.");
+    undoStack.pop();
+    return false;
+  }
+  if (existing) {
+    Object.assign(existing, { width: first.width, depth: first.depth, openings: first.openings, items: first.items });
+    model.currentRoom = existing.id;
+  } else {
+    model.rooms.push(first);
+    model.currentRoom = first.id;
+  }
+  selectedId = null; selectedOpening = -1;
+  renderAll(); save();
+
+  let msg = "Loaded " + first.name + ": " + first.items.length + " item"
+    + (first.items.length === 1 ? "" : "s")
+    + (first.openings.length ? ", " + first.openings.length + " opening"
+      + (first.openings.length === 1 ? "" : "s") : "") + ".";
+  if (res.rooms.length > 1) msg += " The file had " + res.rooms.length
+    + " rooms; only the first was loaded.";
+  if (res.skipped.length) msg += " Skipped " + res.skipped.length + ": " + res.skipped.join("; ") + ".";
+  say("share-status", msg, res.skipped.length > 0);
+  return true;
+}
+
+function wireShare() {
+  $("copy-md").addEventListener("click", (e) => {
+    const md = currentMarkdown();
+    navigator.clipboard.writeText(md).then(
+      () => flash(e.currentTarget, "Copied"),
+      () => { $("paste-box").value = md; say("share-status", "Couldn't reach the clipboard. The plan is in the box below, ready to copy.", true); }
+    );
+  });
+  $("download-md").addEventListener("click", () => {
+    downloadBlob(new Blob([currentMarkdown()], { type: "text/markdown;charset=utf-8" }), fileStem() + ".md");
+  });
+
+  $("copy-png").addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) {
+      say("share-status", "This browser can't copy an image. Use Download PNG instead.", true);
+      return;
+    }
+    // ClipboardItem must be built synchronously in the handler or Safari
+    // discards the user gesture and the clipboard write is refused.
+    const item = new ClipboardItem({ "image/png": planPNG() });
+    navigator.clipboard.write([item]).then(
+      () => flash(btn, "Copied"),
+      () => say("share-status", "Couldn't copy the image. Use Download PNG instead.", true)
+    );
+  });
+  $("download-png").addEventListener("click", () => {
+    planPNG().then(
+      b => downloadBlob(b, fileStem() + ".png"),
+      () => say("share-status", "Couldn't make the image.", true)
+    );
+  });
+
+  $("load-md").addEventListener("click", () => {
+    const t = $("paste-box").value.trim();
+    if (!t) { say("share-status", "Paste a plan into the box first.", true); return; }
+    loadMarkdown(t, "box");
+  });
+
+  // Cmd + V anywhere on the page, except inside a field the user is typing in.
+  document.addEventListener("paste", (evt) => {
+    if (inField(evt.target) && evt.target !== $("paste-box")) return;
+    const text = (evt.clipboardData || window.clipboardData).getData("text/plain");
+    if (!text || !/room\s*:/i.test(text)) return;
+    evt.preventDefault();
+    loadMarkdown(text, "paste");
+  });
+}
+
+/* --- storage -------------------------------------------------------------- */
+
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(writeNow, 300);
+}
+function writeNow() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(model)); } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) writeNow(); });
+window.addEventListener("pagehide", writeNow);
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    const m = JSON.parse(raw);
+    if (!m || !m.rooms || !m.rooms.length) return null;
+    m.rooms.forEach(r => { r.openings = r.openings || []; r.items = r.items || []; });
+    m.settings = m.settings || { snap: 5, grid: true };
+    return m;
+  } catch (e) { return null; }
+}
+
+/* --- boot ----------------------------------------------------------------- */
+
+function boot() {
+  model = load() || defaultModel();
+  $("btn-grid").setAttribute("aria-pressed", String(model.settings.grid));
+  $("btn-snap").textContent = "Snap " + model.settings.snap + " cm";
+  $("btn-snap").setAttribute("aria-pressed", String(model.settings.snap === 5));
+  wirePanel();
+  wireShare();
+  renderPresetRows();
+  renderAll();
+
+  $("clear-data").addEventListener("click", () => {
+    if (!confirm("Clear the saved plan and start again?")) return;
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    model = defaultModel();
+    selectedId = null; selectedOpening = -1; undoStack = [];
+    renderAll(); save();
+    say("share-status", "Cleared. Starting again with an empty room.");
+  });
+}
+
+boot();
+
+</script>
+</body>
+</html>

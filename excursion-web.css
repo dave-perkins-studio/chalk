@@ -1,0 +1,818 @@
+/* ============================================================================
+   EXCURSION — WEB.  Shared stylesheet for the Dave Perkins personal site.
+   Hi-fi build, post-Gate 2 (amendments applied). Every token and component
+   below is extracted from direction/style-tile.html and
+   direction/home-concept.html — those two files are the Gate 2 record and
+   stay untouched; this file is the single real stylesheet the six
+   production templates link, and what the Jekyll build will ship.
+
+   Structure of this file:
+     01. Tokens (light + dark)
+     02. Reset & base
+     03. The frame (fixed hairlines + graph-paper gutter)
+     04. Layout helpers (.page, .hold, .measure)
+     05. Rules (section / bolted / dashed item)
+     06. Type scale (three families, four roles, never mixed)
+     07. Header, masthead emblem, primary nav
+     08. Hero (Home only, but tokens shared)
+     09. Fingerpost arm — reserved for hero CTA + 404 escapes ONLY
+     10. Section scaffolding (labels, stream-head)
+     11. Kind chips
+     12. Stream / entry rows (Home, "more from the stream", Work side project)
+     13. Permalink page headers (Article, Link/Note)
+     14. Article body (running prose, headings, pull-quote, content tags)
+     15. Link/Note specifics (quote block, source badge, note-variant demo)
+     16. Work specifics (client rows, attribution, NDA line)
+     17. About specifics (portrait)
+     18. 404 specifics (error numeral, escape arm-stack)
+     19. Buttons (copy-email) & boop
+     20. Footer / ticket
+     21. GOV.UK focus state, verbatim
+     22. Skip link & visually-hidden
+     23. Reduced motion
+
+   Fonts load from the Google Fonts CDN in each template's <head> for now.
+   Production build should self-host all three as woff2 from the repo — see
+   hifi/README.md build notes.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   01. TOKENS
+   -------------------------------------------------------------------------- */
+:root{
+  color-scheme: light dark;
+
+  /* paper and ink ---------------------------------------------------------- */
+  --paper:      #F7F2E9;   /* page. warm cream, never white */
+  --paper-tint: #EFE7D7;   /* hover/pressed fill. means "this is interactive" */
+  --ink:        #2B251C;   /* all reading text.            13.61:1 on paper */
+  --ink-muted:  #64594B;   /* supporting + all metadata.  6.09 paper / 5.56 tint */
+  --ink-faint:  #A39781;   /* NON-TEXT ONLY. rules, glyphs, inactive marks */
+  --rule:       rgba(107,90,68,.40);
+  --rule-dash:  rgba(107,90,68,.35);
+  --rule-faint: rgba(107,90,68,.20); /* item rules: tops and tails on rows */
+  --grid:       rgba(107,90,68,.12);
+
+  /* accents. contrast-safe variants only ------------------------------------ */
+  --blue:       #495C7C;   /* links, labels, title hover  6.06 paper / 5.50 tint */
+  --berry:      #BF3C73;   /* kind edge + quote rule. NON-TEXT: 4.58 paper */
+  --berry-ink:  #9F3260;   /* text-safe berry cut. 6.08 paper / 5.51 tint */
+  --berry-deep: #872B51;   /* weighted edge deepened, berry arm. 7.55 paper */
+  --taupe:      #766D61;   /* kind edge.                 NON-TEXT: 4.56 paper */
+  --edge-deep:  #2F3D55;   /* weighted bottom edge, pressed */
+
+  /* Chip fills. Hue and saturation are the accent's; only lightness moved,
+     to the lightest tone of each hue that still holds 5.5:1 against the --paper
+     label knocked out of it. That is a deliberate point of headroom over the
+     4.5 AA floor, so the chips stay quiet without sitting on the threshold.
+     Separate tokens from the accents above because those also carry link text
+     and section labels. Every value here was tuned by quantising the candidate
+     to 8-bit hex FIRST and measuring that: measuring the float and rounding
+     afterwards lands a hair under, which is a mistake made once already. */
+  --chip-blue:  #4F6286;   /* kind: article.  5.50:1 with --paper */
+  --chip-berry: #A93566;   /* kind: link.     5.56:1 with --paper */
+  --chip-taupe: #696056;   /* kind: note.     5.53:1 with --paper */
+
+  /* GOV.UK focus state, verbatim (Gate 1, binding) -------------------------- */
+  --focus-yellow:#ffdd00;
+  --focus-ink:   #0b0c0c;
+
+  /* spacing. base unit 14, exactly as Excursion §4.1 ------------------------ */
+  --u-half:7px; --u:14px; --u2:28px; --u3:42px; --u4:56px; --u6:84px; --u8:112px;
+  --gutter: clamp(14px, 2.4vw, 34px);
+  --bolt:   clamp(9px, .8vw, 12px);   /* bolt head. scales with the gutter */
+
+  /* Row bleed, used by the stream and the client list. --bleed-out takes a list
+     out of the 1120px column so its item rules meet the frame lines;
+     --bleed-in puts the row's own content back on the column, so text stays
+     aligned with every heading on the page at any width while the lines and the
+     hover fill run to the edge of the grid. Both resolve against .page's
+     container (see section 04), so the scrollbar is excluded. */
+  --bleed-out: calc((100% - 100cqw) / 2);
+  --bleed-in:  calc(max(0px, (100cqw - 1120px) / 2) + var(--u2));
+
+  /* Motion split: a box fades, text does not. The row's fill and its coloured
+     bottom bar ease in over --box-fade; the title's colour and underline
+     switch with no transition at all, so the pointer feels answered the
+     instant it lands and the surface catches up behind it. Inside Excursion's
+     200ms budget either way. */
+  --box-fade: 180ms;
+
+  /* three families, four roles ---------------------------------------------- */
+  --wayfind:'Jost',"Helvetica Neue",Arial,sans-serif;        /* signage */
+  --content:'Petrona',Georgia,"Times New Roman",serif;       /* display + titling */
+  --reading:'Inclusive Sans',system-ui,-apple-system,"Segoe UI",sans-serif; /* running body */
+  /* metadata voice. No longer a separate face: it is Inclusive Sans at 300,
+     uppercase and letterspaced on the small labels, so the system carries
+     three families rather than four. Kept as its own token because the role is
+     still distinct, and because swapping the metadata face later is then one
+     edit rather than nine. */
+  --data:'Inclusive Sans',system-ui,-apple-system,"Segoe UI",sans-serif;
+  --data-weight:300;
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#221E18; --paper-tint:#2C2720;
+    --ink:#F1E9D9; --ink-muted:#A69D8D; --ink-faint:#7C7363;
+    --rule:rgba(241,233,217,.25); --rule-dash:rgba(241,233,217,.22);
+    --rule-faint:rgba(241,233,217,.13);
+    --grid:rgba(241,233,217,.07);
+    --blue:#93A6C4; --berry:#C76990; --berry-ink:#D885A7; --berry-deep:#DF9BB7;
+    --taupe:#918676; --edge-deep:#CFC5B0;
+    /* After dark the fill is the light one and the label is the dark one, so
+       headroom is found by darkening the fill rather than lightening it.
+       5.51 / 5.50 / 5.50:1 against the --paper label. */
+    --chip-blue:#8096B9; --chip-berry:#CE7C9E; --chip-taupe:#9E9386;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   02. RESET & BASE
+   -------------------------------------------------------------------------- */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  padding:0 var(--gutter);
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--content);
+  font-size:19px;
+  line-height:1.65;
+  font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overflow-x:hidden; /* guards the full-bleed 100vw rule trick below */
+}
+h1,h2,h3{margin:0}
+a{color:var(--blue)}
+img{max-width:100%;display:block}
+
+/* --------------------------------------------------------------------------
+   03. THE FRAME — printed on the device, never moves (Excursion §4.2, §6)
+   -------------------------------------------------------------------------- */
+.frame{position:fixed;inset:0;z-index:0;pointer-events:none}
+.frame::before,.frame::after{
+  content:"";position:absolute;top:0;bottom:0;width:var(--gutter);
+  background-image:
+    repeating-linear-gradient(to right, var(--grid) 0 1px, transparent 1px var(--u)),
+    repeating-linear-gradient(to bottom, var(--grid) 0 1px, transparent 1px var(--u));
+}
+.frame::before{left:0;border-right:1px solid var(--rule)}
+.frame::after{right:0;border-left:1px solid var(--rule)}
+
+/* --------------------------------------------------------------------------
+   04. LAYOUT HELPERS
+   -------------------------------------------------------------------------- */
+/* .page is the query container for the row-bleed maths below, so 100cqw
+   resolves to the body's content box: the area between the two frame lines,
+   scrollbar excluded (100vw would include it and overshoot the right-hand
+   frame line). It goes here rather than on body deliberately — container-type
+   applies layout containment, which would make body the containing block for
+   .frame's position:fixed and drop the frame out of the viewport. .frame is a
+   sibling of .page, so it is unaffected. */
+.page{position:relative;z-index:1;container-type:inline-size}
+.hold{max-width:1120px;margin:0 auto;padding-left:var(--u2);padding-right:var(--u2)}
+.measure{max-width:64ch}
+
+/* NB: any element carrying .hold must never also use the `padding` shorthand —
+   it silently resets .hold's horizontal padding and knocks the element out of
+   alignment with the rest of the column. Set padding-top/padding-bottom only.
+   (Real bug, caught by measuring, in the direction-stage build — see
+   direction/README.md production notes.) */
+
+/* --------------------------------------------------------------------------
+   05. RULES — full-bleed, crossing the frame (Excursion §4.3)
+   -------------------------------------------------------------------------- */
+.rule{
+  border:0;border-top:1px solid var(--rule);
+  margin:0 calc(var(--gutter) * -1);position:relative;
+  /* overflow:visible is load-bearing, not tidying. Every rule on the site is
+     an <hr>, and Chrome's UA stylesheet gives hr `overflow:hidden`. The bolt
+     heads below are pseudo-elements sitting at top:-bolt/2 — outside this
+     1px-high box — so on an hr they were clipped and never painted at all.
+     The bolted rule has therefore been invisible as a device in Chrome since
+     it was written. Caught 2026-08-18 while building a deck from this
+     stylesheet. */
+  overflow:visible;
+}
+.rule--bolt::before,.rule--bolt::after{
+  content:"";position:absolute;width:var(--bolt);height:var(--bolt);
+  top:calc(var(--bolt) / -2);border-radius:50%;background:var(--ink);
+}
+.rule--bolt::before{left:calc(var(--gutter) - var(--bolt) / 2)}
+.rule--bolt::after {right:calc(var(--gutter) - var(--bolt) / 2)}
+.rule--dash{border-top:1px dashed var(--rule-faint);margin:0}
+
+/* --------------------------------------------------------------------------
+   06. TYPE SCALE — four voices, never mixed
+   -------------------------------------------------------------------------- */
+.t-display{font-weight:600;font-size:clamp(2.75rem,6.4vw,5.25rem);line-height:1.02;letter-spacing:-.022em;margin:0}
+.t-title  {font-weight:600;font-size:clamp(2.125rem,4.4vw,3.5rem);line-height:1.08;letter-spacing:-.018em;margin:0}
+.t-head   {font-weight:600;font-size:clamp(1.5rem,2.4vw,1.875rem);line-height:1.25;letter-spacing:-.01em;margin:var(--u3) 0 var(--u)}
+.t-entry  {font-weight:500;font-size:clamp(1.375rem,2.4vw,1.9rem);line-height:1.2;letter-spacing:-.012em;margin:0}
+.t-lede   {font-family:var(--reading);font-weight:400;font-size:clamp(1.125rem,1.6vw,1.3125rem);line-height:1.5;color:var(--ink-muted);margin:0}
+/* No italics anywhere on the site, so a pull quote is set apart without any
+   change of face: half a point larger than body, muted, on a 52ch measure with
+   a clear line of air above and below. */
+.t-aside  {font-family:var(--reading);font-size:1.125rem;color:var(--ink-muted);
+  margin:var(--u3) 0;max-width:52ch}
+
+.t-label{font-family:var(--wayfind);font-weight:500;font-size:13px;line-height:1.3;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--blue);margin:0}
+.t-btn  {font-family:var(--wayfind);font-weight:500;font-size:16px;letter-spacing:0}
+.t-meta {font-family:var(--data);font-weight:var(--data-weight);font-size:13px;line-height:1.5;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted)}
+.t-foot {font-family:var(--data);font-weight:var(--data-weight);font-size:12px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted)}
+
+/* the reading voice: running prose people actually read end to end */
+.t-body{font-family:var(--reading);font-size:17.5px;line-height:1.7;max-width:64ch;color:var(--ink)}
+.t-body + .t-body{margin-top:var(--u2)}
+/* a standalone intro paragraph under a page h1 (Work), same voice as the
+   hero pitch: it is prose someone reads end to end, not a title or a dek */
+.pitch{font-family:var(--reading);font-size:17.5px;line-height:1.7;
+  color:var(--ink-muted);max-width:46ch;margin:var(--u2) 0 0}
+
+/* inline links inside running prose. No transition: text answers the pointer
+   instantly and only surfaces fade (see --box-fade). */
+.link{
+  color:var(--blue);text-decoration:underline;
+  text-decoration-thickness:1px;text-underline-offset:.18em;
+}
+.link:hover{text-decoration-thickness:3px}
+
+/* --------------------------------------------------------------------------
+   07. HEADER, MASTHEAD EMBLEM, PRIMARY NAV
+   -------------------------------------------------------------------------- */
+.site-header{display:flex;align-items:center;justify-content:space-between;
+  gap:var(--u2);flex-wrap:wrap;padding-top:var(--u2);padding-bottom:var(--u2)}
+
+/* the Excursion totem (§10.1) at masthead scale, static. Plate carries
+   PERKINS (7 characters, inside the system's own "one word, max ~8" rule);
+   "Useful UX Co." sits beside it on the post. DOM text is sentence case, CSS
+   uppercases it, so the link's accessible name is exactly
+   "Perkins Useful UX Co." */
+.masthead{display:inline-flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.masthead .plate{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  height:38px;padding:0 16px;background:var(--blue);border-radius:9999px;
+  font-family:var(--wayfind);font-weight:500;font-size:12px;line-height:1;
+  letter-spacing:.3em;text-indent:.3em;text-transform:uppercase;color:var(--paper);
+}
+.masthead .plate::after{content:"";position:absolute;inset:4px;
+  border:2px solid var(--paper);border-radius:9999px}
+.masthead .co{font-family:var(--wayfind);font-weight:500;font-size:15px;
+  letter-spacing:.04em;color:var(--ink);white-space:nowrap}
+/* on focus the plate inverts, so the emblem does not fight the yellow block */
+.masthead:focus-visible .plate{background:var(--focus-ink);color:var(--focus-yellow)}
+.masthead:focus-visible .plate::after{border-color:var(--focus-yellow)}
+.masthead:focus-visible .co{color:var(--focus-ink)}
+
+.nav ul{list-style:none;display:flex;gap:var(--u2);margin:0;padding:0}
+.nav a{
+  font-family:var(--wayfind);font-weight:500;font-size:14px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-muted);text-decoration:none;
+  display:inline-block;
+  padding-top:var(--u);padding-bottom:var(--u-half);border-bottom:2px solid transparent;
+}
+.nav a:hover{color:var(--ink);border-bottom-color:var(--berry)}
+.nav a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--ink)}
+.nav a:focus-visible{border-bottom-color:transparent}
+
+/* --------------------------------------------------------------------------
+   08. HERO (Home only)
+   -------------------------------------------------------------------------- */
+.hero{padding-top:var(--u4);padding-bottom:var(--u6)}
+.hero-grid{display:grid;gap:var(--u3)}
+@media (min-width:900px){
+  /* The headline takes the left column; the pitch and CTA sit in the right,
+     bottom-aligned to the headline's last line. This replaced the rejected
+     cursor-following shape: the width goes to text that was always going to
+     be read, not to an ornament. */
+  .hero-grid{grid-template-columns:minmax(0,1.45fr) minmax(280px,1fr);
+    gap:var(--u4);align-items:end}
+}
+.kicker{font-family:var(--wayfind);font-weight:500;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--blue);margin:0 0 var(--u2)}
+.hero h1{font-weight:600;font-size:clamp(2.75rem,6.4vw,5.25rem);line-height:1.02;
+  letter-spacing:-.022em;margin:0}
+
+/* --------------------------------------------------------------------------
+   09. FINGERPOST ARM — "this takes you somewhere". Reserved for the hero's
+   "Say hello" and the 404's three escape links ONLY (Gate 2 amendment). Never
+   a stream row, never the nav, never something that acts in place.
+   -------------------------------------------------------------------------- */
+/* The pointed sign is retired (David): the arm is now a clean plate,
+   distinguished by its filled tint, coloured label, and the weighted
+   coloured bottom edge. Its reserved role narrowed again when the hero's
+   Say hello was removed: the 404's escape links are now the only arms on
+   the site. */
+.arm{
+  /* each arm names its own deepened hover ink once; the blue arms deepen
+     to the navy edge and the berry arm overrides this to berry-deep, so
+     both variants share one hover mechanism */
+  --arm-deep:var(--edge-deep);
+  display:inline-flex;align-items:center;min-height:48px;
+  padding:15px 20px;text-decoration:none;
+  font-family:var(--wayfind);font-weight:500;font-size:16px;line-height:1;
+  background:var(--paper-tint);color:var(--blue);
+  border:1px solid var(--rule);border-bottom:2px solid var(--blue);
+  transition:border-color var(--box-fade) ease-out,box-shadow var(--box-fade) ease-out,
+             background-color var(--box-fade) ease-out;
+}
+/* Hover is quiet: the ring and the label take the arm's deepened colour,
+   nothing moves and nothing thickens. The fill does not change: lightening
+   it made the hovered arm look hollower than its neighbours. Label colour
+   switches with no transition, per the motion split; the ring fades as a
+   surface. Excluded while focused, or it would fight the GOV.UK block. */
+.arm:hover:not(:focus-visible){
+  color:var(--arm-deep);
+  border-color:var(--arm-deep);
+}
+/* pressed: the whole plate drops onto its edge */
+.arm:active{transform:translateY(3px);border-bottom-width:1px;margin-bottom:2px;
+  box-shadow:inset 0 -1px 0 var(--arm-deep)}
+
+/* A person-facing arm reads in berry: label takes the text-safe berry cut;
+   every deepened hover ink comes through --arm-deep, so the ring, label,
+   and pressed edge all follow. CURRENTLY UNPLACED — the hero's Say hello
+   was removed and the 404 arms are page-facing blue. Kept, with its two
+   tokens, for the next arm that talks to a person. */
+.arm--berry{--arm-deep:var(--berry-deep);color:var(--berry-ink);border-bottom-color:var(--berry)}
+
+/* a vertical stack of arms (404 only). Excursion caps a stack at four; this
+   site uses at most three. */
+.arm-stack{display:flex;flex-direction:column;gap:var(--u);align-items:flex-start;
+  margin-top:var(--u2)}
+.arm-stack .arm{width:100%;max-width:520px;padding-top:16px;padding-bottom:16px;
+  height:auto;min-height:56px;text-align:left}
+
+/* --------------------------------------------------------------------------
+   10. SECTION SCAFFOLDING
+   -------------------------------------------------------------------------- */
+.label{font-family:var(--wayfind);font-weight:500;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--blue);margin:0}
+.stream-head{display:flex;align-items:baseline;justify-content:space-between;
+  gap:var(--u2);padding:var(--u4) 0 var(--u2)}
+.stream-head .count{font-family:var(--data);font-weight:var(--data-weight);font-size:12.5px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted)}
+/* a simple page's header block: h1 (+ optional standalone .pitch paragraph) */
+.page-header{padding-top:var(--u3);padding-bottom:var(--u2)}
+
+/* --------------------------------------------------------------------------
+   11. KIND CHIPS — inverted: the kind colour fills the chip and the label is
+   knocked out in paper. Square; the only curves on the site are the totem and
+   the bolt heads. This reverses the earlier outline-only rule (Excursion §5.5)
+   on David's instruction at Gate 3.
+
+   The fill and the label both come from tokens that flip with the theme, so
+   the inversion holds either way round: cream on blue in daylight, near-black
+   on blue at night. Each fill is the lightest tone of its own hue that still
+   clears AA against the label, so the chips sit as quietly as the standard
+   allows while keeping a point of headroom over the AA floor: 5.50 to 5.56:1
+   in daylight, 5.50 to 5.53:1 after dark. (Raspberry and taupe replaced rose
+   and sage at David's instruction during the dotwork exploration; same
+   doctrine, retuned values.)
+   -------------------------------------------------------------------------- */
+.chip{
+  display:inline-block;font-family:var(--wayfind);font-weight:500;font-size:12px;
+  letter-spacing:.1em;text-transform:uppercase;line-height:1;
+  padding:5px 8px 4px;border:1px solid transparent;border-radius:0;
+  background:var(--chip, var(--chip-blue));color:var(--paper);
+}
+.k-article{--chip:var(--chip-blue)}
+.k-link{--chip:var(--chip-berry)}
+.k-note{--chip:var(--chip-taupe)}
+
+/* --------------------------------------------------------------------------
+   12. STREAM / ENTRY ROWS — the weighted edge, applied to a row. Used on
+   Home, Article's "more from the stream", Link/Note's "more links & notes",
+   Work's side-project entry, and nowhere else.
+   -------------------------------------------------------------------------- */
+.stream{list-style:none;margin:0;padding:0 0 var(--u4)}
+/* Topped and tailed: a rule above every row and one below the last, so no two
+   rows ever stack two lines in the same place. The bleed sits on the item, not
+   on the list, so each row's rules and fill reach the frame lines. */
+.entry{border-top:1px dashed var(--rule-faint);transition:border-color var(--box-fade) ease-out;
+  width:100cqw;margin-inline:var(--bleed-out)}
+.entry:last-child{border-bottom:1px dashed var(--rule-faint)}
+/* The 3px kind edge that appears on hover sits exactly where the next row's
+   top rule is, so that rule steps aside rather than doubling up. */
+.entry:hover + .entry,.entry:focus-within + .entry{border-top-color:transparent}
+.entry:last-child:hover,.entry:last-child:focus-within{border-bottom-color:transparent}
+.entry--article{--kind:var(--blue)}
+.entry--link{--kind:var(--berry)}
+.entry--note{--kind:var(--taupe)}
+.entry-row{
+  display:block;text-decoration:none;color:inherit;position:relative;
+  padding-top:var(--u2);padding-bottom:var(--u2);
+  padding-inline:var(--bleed-in);
+  box-shadow:inset 0 -3px 0 transparent;
+  transition:background-color var(--box-fade) ease-out,box-shadow var(--box-fade) ease-out;
+}
+.entry-row:hover{background:var(--paper-tint);box-shadow:inset 0 -3px 0 var(--kind, var(--blue))}
+
+/* A chevron slides in at the column's right edge on hover, in the row's own
+   kind colour. Drawn from two borders rather than set as a character, so there
+   is no glyph for a screen reader to announce and no font to depend on. It is
+   decoration: the row was already a link, and its accessible name is unchanged.
+   Absolutely positioned, so nothing reflows when it appears. */
+.entry-row::after{
+  content:"";position:absolute;right:var(--bleed-in);top:50%;margin-top:-5px;
+  width:10px;height:10px;
+  border-top:2px solid var(--kind, var(--blue));
+  border-right:2px solid var(--kind, var(--blue));
+  transform:rotate(45deg);
+  opacity:0;translate:-8px 0;
+  transition:opacity var(--box-fade) ease-out,translate var(--box-fade) ease-out;
+}
+.entry-row:hover:not(:focus-visible)::after{opacity:1;translate:0 0}
+.entry-top{display:flex;align-items:center;gap:var(--u);flex-wrap:wrap;margin-bottom:var(--u-half)}
+.entry-title{font-weight:500;font-size:clamp(1.375rem,2.4vw,1.9rem);line-height:1.2;
+  letter-spacing:-.012em;display:block}
+/* The title takes the link colour and a 3px underline on hover, the same
+   weight as the inline-link hover and the pressable bottom edge, so the row
+   says "this title is the link" rather than leaving the fill to imply it.
+   Hover is excluded while the row is focused: the GOV.UK block is black on
+   yellow, and a bare :hover here would out-specify it (see section 21). */
+.entry-row:hover:not(:focus-visible) .entry-title,
+a.client-row:hover:not(:focus-visible) .client-name{
+  color:var(--blue);
+  text-decoration:underline;
+  text-decoration-thickness:3px;
+  text-underline-offset:.14em;
+}
+/* the reading voice: a dek is a sentence someone reads, so it takes the same
+   face as body copy. The title above it stays Petrona, which is what holds the
+   row together as one unit. */
+.entry-dek{font-family:var(--reading);margin:var(--u-half) 0 0;color:var(--ink-muted);font-size:17px;line-height:1.5;
+  max-width:62ch;display:block}
+
+/* --------------------------------------------------------------------------
+   13. PERMALINK PAGE HEADERS (Article, Link/Note)
+   -------------------------------------------------------------------------- */
+.entry-header{padding-top:var(--u3);padding-bottom:var(--u2)}
+.entry-header .chip{margin-bottom:var(--u)}
+.entry-header h1{margin-top:var(--u)}
+.entry-header .t-meta{margin-top:var(--u)}
+
+/* --------------------------------------------------------------------------
+   14. ARTICLE BODY — running prose, headings, one pull-quote, content tags
+   -------------------------------------------------------------------------- */
+.article-body{padding-top:var(--u2)}
+.article-body h2{font-family:var(--content)}
+
+/* content tags: subject metadata, not wayfinding, so they take the data
+   voice — Inclusive Sans 300, uppercase, plain text, not chips, not links (no
+   per-tag archive page exists in this sitemap; a tag that looked tappable and
+   went nowhere would be a fake affordance) */
+.tag-list{list-style:none;display:flex;flex-wrap:wrap;gap:var(--u) var(--u2);
+  margin:var(--u3) 0 0;padding-top:var(--u2);border-top:1px dashed var(--rule-faint)}
+.tag-list li{font-family:var(--data);font-weight:var(--data-weight);font-size:13px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-muted)}
+
+/* --------------------------------------------------------------------------
+   15. LINK/NOTE SPECIFICS — quote block, source badge, note-variant demo
+   -------------------------------------------------------------------------- */
+.quote-block{
+  /* the reading voice, upright: no italics on the site, and nothing
+     synthesised. The 3px berry edge and the muted colour carry it instead. */
+  font-family:var(--reading);color:var(--ink-muted);
+  font-size:clamp(1.125rem,1.8vw,1.375rem);line-height:1.55;max-width:56ch;
+  margin:var(--u3) 0;padding-left:var(--u2);
+  border-left:3px solid var(--berry);
+}
+.source-badge{font-family:var(--data);font-weight:var(--data-weight);font-size:13.5px;color:var(--ink-muted);
+  display:inline-flex;align-items:center;gap:5px}
+/* Fixed box and a transform-only hover, so the arrow can grow without shifting
+   anything beside it. */
+.outbound-glyph{font-style:normal;display:inline-block;width:1em;text-align:center;
+  transition:transform var(--box-fade) ease-out,color var(--box-fade) ease-out}
+
+/* a boxed comparison proving one template serves link and note alike, with
+   the quote block and source badge simply absent for a note. Documentation
+   device, not literal shipped stacking — see the HTML comment in
+   link-note.html for the full explanation. */
+.note-variant{margin-top:var(--u4);padding:var(--u3) var(--u2);
+  background:var(--paper-tint);border-top:1px solid var(--rule)}
+.note-variant .note-variant-label{display:block;font-family:var(--wayfind);
+  font-weight:500;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-muted);margin-bottom:var(--u)}
+.note-variant .t-meta{display:block;margin-bottom:6px}
+.note-variant .entry-title{font-size:1.25rem}
+.note-variant .t-body{margin-top:var(--u-half);font-size:16.5px}
+
+/* --------------------------------------------------------------------------
+   16. WORK SPECIFICS — client rows, attribution, NDA line
+   -------------------------------------------------------------------------- */
+.client-list{list-style:none;margin:0;padding:0}
+.client-row{
+  display:flex;align-items:center;justify-content:space-between;gap:var(--u2);
+  padding-top:var(--u2);padding-bottom:var(--u2);
+  padding-inline:var(--bleed-in);
+  text-decoration:none;color:inherit;flex-wrap:wrap;
+  box-shadow:inset 0 -3px 0 transparent;
+  transition:background-color var(--box-fade) ease-out,box-shadow var(--box-fade) ease-out;
+}
+a.client-row:hover{background:var(--paper-tint);box-shadow:inset 0 -3px 0 var(--blue)}
+/* The "Read on …" badge behaves like the link it sits inside: on hover it
+   takes the same link blue as the title, and the label steps 300 -> 400 —
+   the loaded regular, which reads as its bold; only 300 and 400 of
+   Inclusive Sans are shipped and a synthesised bold stays out. Underline is
+   a hairline: the weight change now carries the emphasis, so the line can
+   step back. The arrow goes blue with the label and scales, which thickens
+   its strokes without any extra weight; it is an icon, so it fades with the
+   surfaces. */
+a.client-row:hover:not(:focus-visible) .source-badge{
+  color:var(--blue);font-weight:400;text-decoration:underline;
+  text-decoration-thickness:1px;text-underline-offset:.22em}
+a.client-row:hover:not(:focus-visible) .outbound-glyph{
+  color:var(--blue);transform:scale(1.3) translate(1px,-1px)}
+.client-main{display:flex;flex-direction:column;gap:2px}
+.client-name{font-family:var(--content);font-weight:500;font-size:clamp(1.1rem,1.8vw,1.375rem)}
+.client-sector{font-family:var(--reading);font-size:15.5px;color:var(--ink-muted)}
+.client-side{display:flex;align-items:center;flex-wrap:wrap;gap:var(--u) var(--u2)}
+.client-attribution{font-family:var(--data);font-weight:var(--data-weight);font-size:12px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);white-space:nowrap}
+
+.nda-line{max-width:60ch;margin:var(--u3) 0 0;padding-top:var(--u2);
+  border-top:1px dashed var(--rule-faint);font-family:var(--reading);
+  font-size:17.5px;line-height:1.7;color:var(--ink-muted)}
+
+/* --------------------------------------------------------------------------
+   17. ABOUT SPECIFICS — portrait
+   -------------------------------------------------------------------------- */
+.portrait{width:100%;max-width:220px;aspect-ratio:1;margin:var(--u2) 0 var(--u3);
+  border:1px solid var(--rule);background:var(--paper-tint);
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  font-family:var(--data);font-weight:var(--data-weight);font-size:12px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-muted);padding:var(--u)}
+
+/* --------------------------------------------------------------------------
+   18. 404 SPECIFICS — error numeral, escape arm-stack
+   -------------------------------------------------------------------------- */
+.error-block{padding-top:var(--u4);padding-bottom:var(--u2)}
+.error-numeral{font-family:var(--data);font-weight:var(--data-weight);
+  font-variant-numeric:tabular-nums;font-size:clamp(3rem,9vw,6rem);
+  line-height:1;color:var(--ink);margin:0 0 var(--u2)}
+/* The scramble swaps a character 18 times a second, and Inclusive Sans has no
+   tabular-figures feature (the declaration above is inert here, kept only in
+   case the metadata face changes), so its digits run from roughly 0.68ch to
+   1ch wide. Each slot is therefore a fixed 1ch cell — the width of a zero,
+   which is the widest digit — so characters change without anything moving.
+   The scramble charset is digits only for the same reason; # % & are half
+   again as wide and would not fit the cell. */
+.error-numeral span{display:inline-block;width:1ch;text-align:center}
+.error-block h1{margin-bottom:var(--u)}
+.error-block .t-body{color:var(--ink-muted)}
+
+/* --------------------------------------------------------------------------
+   19. BUTTONS & BOOP
+   -------------------------------------------------------------------------- */
+.btn{
+  font-family:var(--wayfind);font-weight:500;font-size:16px;line-height:1;
+  display:inline-flex;align-items:center;gap:10px;
+  min-height:48px;padding:15px 20px;border-radius:0;cursor:pointer;
+  background:var(--paper-tint);color:var(--blue);
+  border:1px solid var(--rule);border-bottom:2px solid var(--blue);
+  box-shadow:inset 0 -4px 0 transparent;
+  /* `color` is here for the "Copied" confirmation, which is a state change on
+     a control rather than a text hover, so it fades with the rest of the box. */
+  transition:border-color var(--box-fade) ease-out,color var(--box-fade) ease-out,
+             background-color var(--box-fade) ease-out,box-shadow var(--box-fade) ease-out;
+}
+/* Same hover grammar as the arm: the ring and the label take the deepened
+   colour, nothing moves and nothing thickens. */
+.btn:hover:not(:focus-visible){
+  color:var(--edge-deep);
+  border-color:var(--edge-deep);
+}
+/* pressed: drops onto its edge, and the edge all but disappears under it */
+.btn:active{transform:translateY(3px);border-bottom-width:1px;margin-bottom:2px;
+  box-shadow:inset 0 -1px 0 var(--edge-deep)}
+/* Confirmed state reads in blue: the palette's green went with the sage
+   kind colour (raspberry adoption), and the label change to "Copied"
+   carries the meaning — colour was never the sole signal. */
+.btn.is-done{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* Ghost variant. Same box, same size, same weighted edge as .btn, unfilled at
+   rest, so a secondary action reads as secondary without a second shape.
+   Hover is excluded while focused so the GOV.UK yellow is never overridden by
+   the tint (a bare :hover would out-specify the focus rule in section 21). */
+.btn-ghost{background:transparent;text-decoration:none}
+.btn-ghost:hover:not(:focus-visible){background:var(--paper-tint)}
+
+/* Excursion's motion budget: 200ms, decelerate, no overshoot. Small elements
+   only — footer icon-links, the source badge, Work's outbound glyphs. Never
+   body text, never a whole row. */
+@keyframes boop{0%{transform:none}45%{transform:scale(1.12) rotate(-2deg)}100%{transform:none}}
+.boop{display:inline-block}
+.boop:hover,.boop:focus-visible{animation:boop 200ms cubic-bezier(0,0,.2,1)}
+
+/* --------------------------------------------------------------------------
+   20. FOOTER / TICKET
+   -------------------------------------------------------------------------- */
+.site-footer{padding-top:var(--u3);padding-bottom:var(--u4)}
+/* Contact actions: two discreet centred links (David, replacing the button
+   pair). The copy control stays a real <button> — it acts in place — and
+   only dresses as a link. Underlined at rest so both read as interactive;
+   the inline-link hover grammar (thicker underline, no transition on text).
+   Padding keeps each target past the WCAG 2.5.8 24px floor. */
+.footer-links{display:flex;align-items:center;justify-content:center;
+  gap:var(--u);flex-wrap:wrap}
+.footer-link{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--wayfind);font-weight:500;font-size:14px;letter-spacing:.02em;
+  color:var(--blue);background:none;border:0;padding:8px 6px;cursor:pointer;
+  text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em;
+}
+.footer-link:hover:not(:focus-visible){text-decoration-thickness:3px}
+.footer-link:focus-visible{text-decoration:none}
+/* colour eases both ways, so the berry arrives softly with the ping and,
+   when the confirmation fades, releases back to blue at the same moment
+   and the same 300ms rate as the message (see .copy-status) */
+.copy-glyph{width:15px;height:15px;flex:none;transition:color 300ms ease-in-out}
+.ext-glyph{width:13px;height:13px;flex:none}
+.footer-dot{color:var(--ink-faint)}
+
+/* On success the glyph is briefly emphasised: it flips berry and does one
+   boop-scale pop, inside the 200ms budget (an earlier star-burst ping was
+   cut as too theatrical). The berry then releases back to blue in step
+   with the message fade — see the colour transition on .copy-glyph. */
+.is-copied .copy-glyph{color:var(--berry);
+  animation:copy-pop 200ms cubic-bezier(0,0,.2,1)}
+@keyframes copy-pop{45%{transform:scale(1.25) rotate(-6deg)}100%{transform:none}}
+
+/* The copy confirmation: one element is both the visible message and the
+   polite live region (role="status" in the markup), so what is announced is
+   exactly what is shown. Height is reserved so the ticket never shifts when
+   the message appears, fades, or clears. Berry-ink, not raw berry: the
+   message is text and takes the text-safe cut (6.08 paper / 6.18 dark).
+   The inline thumbs-up is aria-hidden, so the announcement stays words.
+   Success holds for two seconds, then softly fades over 300ms
+   (ease-in-out, no hard start or stop) while the glyph's berry releases
+   back to blue in step; a failure message never fades — it carries the
+   address. */
+.copy-status{min-height:24px;margin:var(--u-half) 0 var(--u);text-align:center;
+  font-family:var(--reading);font-size:14.5px;line-height:1.5;
+  color:var(--berry-ink);
+  opacity:1;transition:opacity 300ms ease-in-out}
+.copy-status.is-hiding{opacity:0}
+.copy-status .thumb{width:14px;height:14px;vertical-align:-2px;margin-right:3px}
+.ticket{text-align:center;padding-top:var(--u2)}
+.ticket p{font-family:var(--data);font-weight:var(--data-weight);font-size:12.5px;line-height:1.6;
+  color:var(--ink-muted);margin:0}
+.ticket p + p{margin-top:6px}
+
+/* --------------------------------------------------------------------------
+   21. GOV.UK FOCUS STATE, VERBATIM (Gate 1, binding)
+   -------------------------------------------------------------------------- */
+a:focus-visible{
+  outline:3px solid transparent;color:var(--focus-ink);background-color:var(--focus-yellow);
+  box-shadow:0 -2px var(--focus-yellow), 0 4px var(--focus-ink);text-decoration:none;
+}
+/* .btn-ghost is an anchor that behaves as a button, so it takes the button
+   focus treatment (solid bottom bar), not the inline-link one. */
+button:focus-visible,.btn-ghost:focus-visible,
+.entry-row:focus-visible,.client-row:focus-visible,
+.arm:focus-visible,.masthead:focus-visible{
+  outline:3px solid transparent;color:var(--focus-ink);background-color:var(--focus-yellow);
+  box-shadow:0 3px 0 var(--focus-ink);
+}
+.entry-row:focus-visible *,.client-row:focus-visible *{color:var(--focus-ink)}
+/* An inverted chip must drop its fill inside the focus block. The rule above
+   turns all descendant text focus-ink, and black on the kind colours measures
+   2.67 to 3.76:1 — below AA. Reverting the chip to an outline keeps the yellow
+   field solid and the label legible. */
+.entry-row:focus-visible .chip,.client-row:focus-visible .chip{
+  background:transparent;border-color:var(--focus-ink)}
+.arm:focus-visible{border-bottom-color:var(--focus-ink)}
+.masthead:focus-visible{padding:4px 8px;margin:-4px -8px}
+.nav a:focus-visible{border-bottom-color:transparent}
+:focus:not(:focus-visible){outline:none}
+
+/* --------------------------------------------------------------------------
+   22. SKIP LINK & VISUALLY-HIDDEN
+   -------------------------------------------------------------------------- */
+.skip{position:absolute;left:-9999px;top:0;z-index:50;background:var(--focus-yellow);
+  color:var(--focus-ink);font-family:var(--wayfind);font-weight:500;padding:12px 18px;
+  box-shadow:0 3px 0 var(--focus-ink)}
+.skip:focus{left:var(--gutter);top:var(--u)}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* --------------------------------------------------------------------------
+   23. REDUCED MOTION — every animation and transition guarded
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important}
+}
+
+/* --------------------------------------------------------------------------
+   24. DOTWORK MOTIF — exploration, branch explore/dotwork-motif.
+   Stipple shading in the classic tattoo manner: dots hang off a bold line,
+   densest at the line and thinning to paper, with the site's full-bleed
+   rules playing the outline. All of it is decoration — aria-hidden in the
+   markup, non-text ink only, no motion. The band is one SVG used as a mask,
+   so the same asset serves both themes and the ink still comes from tokens.
+   -------------------------------------------------------------------------- */
+.stipple-shade{
+  /* Sits inside the frame lines, unlike the rules: the shading is detail
+     within the drawing, not part of the printed device (David, Gate review
+     of this exploration). The negative bottom margin lets the band's sparse
+     tail share space with the following section's own head padding (u3
+     everywhere or deeper), so adding a band costs six pixels of rhythm
+     rather than forty-eight and no template needs a compensating rule. */
+  height:48px;
+  margin-bottom:calc(var(--u2) * -1);
+  background:var(--ink-faint);
+  opacity:.35;
+  -webkit-mask-image:url("assets/stipple-band.svg");
+          mask-image:url("assets/stipple-band.svg");
+  -webkit-mask-repeat:repeat-x;
+          mask-repeat:repeat-x;
+  pointer-events:none;
+}
+/* THE SAFE ZONE RULE: the dapple is decoration and text never enters it.
+   The overlap above is capped at u2, and every section head carries at
+   least u3 of its own padding, so no matter the template there is a
+   minimum u of clear paper between the band's sparse tail and the first
+   line of text. The flipped band gets no overlap at all — page bottoms
+   often end in bare prose with no padding of their own — and instead
+   holds a firm u2 of clear paper above itself. */
+.stipple-shade--up{transform:scaleY(-1);margin-top:var(--u2);margin-bottom:0}
+
+/* Shading at card scale: on hover, whip shading — fine tapered strokes,
+   the second voice of the tattoo vocabulary — combs off both side edges of
+   the row in the row's own kind colour. Complementary to the page bands'
+   dapple rather than a repeat of it, and far quieter: 22px each side,
+   hairline marks, low opacity, in the row's full-bleed lead-in and
+   run-out, never under text. One pseudo-element carries both sides as two
+   mask layers (they composite additively); the right asset is its own
+   random pass, not a mirror, so the pair reads hand-done. The right strip
+   sits outside the chevron's column-aligned position, so they never
+   collide. Opacity-only transition inside the --box-fade budget; excluded
+   while focused so the GOV.UK yellow stays solid. To try the other
+   textures, swap the masks for assets/stipple-edge.svg (dots) or
+   assets/etch-edge.svg (diagonal hatch) — same box, same opacity. */
+.entry-row::before,a.client-row::before{
+  content:"";position:absolute;inset:0;
+  background:var(--kind, var(--blue));
+  -webkit-mask-image:url("assets/whip-edge.svg"),url("assets/whip-edge-r.svg");
+          mask-image:url("assets/whip-edge.svg"),url("assets/whip-edge-r.svg");
+  -webkit-mask-position:left top,right top;
+          mask-position:left top,right top;
+  -webkit-mask-repeat:repeat-y,repeat-y;
+          mask-repeat:repeat-y,repeat-y;
+  opacity:0;transition:opacity var(--box-fade) ease-out;
+  pointer-events:none;
+}
+a.client-row{position:relative}
+.entry-row:hover:not(:focus-visible)::before,
+a.client-row:hover:not(:focus-visible)::before{opacity:.26}
+
+/* The third voice, etch hatching, takes the static figure-and-quotation
+   details, so the three shading styles split cleanly: dots for the page
+   furniture, whip for interaction, etch for figures. Both uses hang off an
+   edge that already exists, per the motif's one rule. */
+/* Quotation: fine hatching combs off the quote's 3px berry rule. It lives
+   inside the quote's own 28px lead-in, so it never sits under text. */
+.quote-block{position:relative}
+.quote-block::before{
+  content:"";position:absolute;left:0;top:2px;bottom:2px;width:22px;
+  background:var(--berry);
+  -webkit-mask-image:url("assets/etch-edge.svg");
+          mask-image:url("assets/etch-edge.svg");
+  -webkit-mask-repeat:repeat-y;
+          mask-repeat:repeat-y;
+  opacity:.2;pointer-events:none;
+}
+/* Figure: the portrait is engraved into the page — hatching inside its
+   left edge. NB this rides on .portrait's pseudo-element: when the
+   placeholder div becomes a real <img> (see about.html build note), wrap
+   the img in a figure carrying the class, or the shading silently goes —
+   pseudo-elements do not render on <img>. */
+.portrait{position:relative}
+.portrait::after{
+  content:"";position:absolute;left:1px;top:1px;bottom:1px;width:22px;
+  background:var(--ink-faint);
+  -webkit-mask-image:url("assets/etch-edge.svg");
+          mask-image:url("assets/etch-edge.svg");
+  -webkit-mask-repeat:repeat-y;
+          mask-repeat:repeat-y;
+  opacity:.4;pointer-events:none;
+}
+
+/* Spot illustration and ornaments: one ink, from tokens via currentColor,
+   so the drawing flips with the theme like everything else. */
+.dotwork-art{display:block;color:var(--ink)}
+.hero-art{width:min(200px,48vw);margin-bottom:var(--u2)}
+.ticket-ornament{display:block;color:var(--ink-faint);width:120px;margin:0 auto var(--u)}
+/* The same filler as an in-content end mark: one per page, at the point the
+   page's own content signs off (article body end, under the 404 numeral,
+   above the About portrait). Left-set on the text column, not centred —
+   only the footer instance centres, because the ticket is centred. */
+.end-mark{display:block;color:var(--ink-faint);width:120px;margin:var(--u3) 0 0}

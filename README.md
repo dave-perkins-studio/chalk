@@ -1,0 +1,103 @@
+# Room planner
+
+A flat, to-scale plan of a room, so you can work out whether the sofa fits
+before it turns up on a lorry.
+
+Draw the room in centimetres, add furniture at its real size, then drag the
+pieces around. You can send the plan to someone as a picture or as a block of
+text, and paste theirs back in.
+
+One HTML file, no build step, no account, nothing sent anywhere. Open
+`index.html` in a browser, or use the hosted copy.
+
+## Using it
+
+Set the room's width and depth in the panel on the right. Width runs left to
+right, depth runs top to bottom, both in centimetres.
+
+Add furniture either from the Common sizes list or by typing a name and a size.
+Items land on the first free patch of floor. Drag them where you want them.
+
+Doors and windows go on a named wall, measured from a corner: north and south
+from the left, east and west from the top. A door draws its swing, and anything
+sitting in the way gets flagged.
+
+Items turn red and dashed when they're outside the room, overlapping something
+else, or blocking a door. The reason is written out under the plan and next to
+the item in the list, so you don't have to go by colour.
+
+### Keys
+
+| Key | What it does |
+|---|---|
+| Drag | Move an item, snapping to 5 cm |
+| Alt while dragging | Snap to 1 cm instead |
+| R | Turn the selected item 90° |
+| Arrow keys | Nudge 1 cm |
+| Shift + arrows | Nudge 10 cm |
+| Delete | Remove the selected item |
+| Cmd + D | Duplicate it |
+| Cmd + Z | Undo |
+| Cmd + V | Load a plan from the clipboard |
+| Esc | Deselect |
+
+You can do all of it from the keyboard. Tab moves through the items on the
+plan, then into the panel.
+
+Your plan is saved in the browser you're using, and nowhere else, so a different
+browser or another computer won't have it and you're probably best sending
+yourself the text if you want it on both.
+
+## The file format
+
+Plans travel as Markdown, because a table survives being pasted into WhatsApp
+and anyone can edit a row by hand. There's no hidden data: what you see is the
+whole plan.
+
+```markdown
+# Room plan: Bedroom 1
+
+Room: 420 × 350 cm
+
+| Opening | Wall | From | Width | Swing | Hinge |
+|---|---|---|---|---|---|
+| Door | S | 40 | 80 | in | left |
+| Window | N | 120 | 150 |  |  |
+
+| Item | Width | Depth | X | Y | Rotation | Notes |
+|---|---|---|---|---|---|---|
+| King bed | 150 | 200 | 130 | 0 | 0 | headboard on the north wall |
+| Bedside table | 40 | 40 |  |  |  | only if it fits |
+```
+
+X and Y are the distance from the top-left corner of the room to the top-left
+corner of the item, after it's been turned. Leave them empty and the item stays
+on the list without going on the plan.
+
+The parser is fairly forgiving. It takes metres or centimetres, `x` or `×`, wall names
+or letters, columns in any order, extra columns it doesn't recognise, and
+tables that have lost their outer pipes. A row it can't read is skipped and
+counted, rather than failing the lot. `samples/mangled-plan.md` is the same
+plan after a round trip through a chat app, and it loads.
+
+Several rooms go in one file under `##` headings. The parser reads them all,
+though this version only loads the first and tells you it did.
+
+## What it doesn't do
+
+- Rooms are rectangles. No L-shapes yet.
+- Furniture turns in 90° steps, not freely.
+- One room at a time on screen.
+- The exported picture uses a system font rather than the page's, because web
+  fonts don't survive the trip into an image.
+
+## Files
+
+| File | What it is |
+|---|---|
+| `index.html` | The whole tool |
+| `excursion-web.css` | The Excursion stylesheet, copied from `personal-site-studio`. Don't edit it here |
+| `samples/example-plan.md` | Two rooms, cleanly formatted |
+| `samples/mangled-plan.md` | The same plan after a chat app has had a go at it |
+
+Actual house plans don't belong in this repo. They go in `personal/life/house/`.
