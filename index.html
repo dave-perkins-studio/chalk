@@ -118,6 +118,16 @@ input,textarea,select{caret-color:var(--ink)}
 .btn-icon:focus-visible{outline:3px solid transparent;color:var(--focus-ink);
   background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink);border-color:transparent}
 
+/* Put the panel away and the plan takes the whole shell. The brief wanted the
+   plan to be the biggest thing on screen; a permanent full-height column was
+   what stopped it. The mark is the panel itself, filled while it is showing. */
+#btn-panel .panel-fill{fill:currentColor;stroke:none}
+#btn-panel[aria-expanded="false"] .panel-fill{fill:none}
+.app-body.is-collapsed .planner-panel{display:none}
+@media (min-width:900px) and (min-height:620px){
+  .app-body.is-collapsed{grid-template-columns:minmax(0,1fr)}
+}
+
 .settings{position:relative}
 .settings > summary{font-family:var(--wayfind);font-weight:500;font-size:14px;
   letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);
@@ -425,6 +435,14 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
             </svg><span class="vh">Redo</span>
           </button>
         </div>
+          <button type="button" class="btn-icon" id="btn-panel"
+                  aria-expanded="true" aria-controls="planner-panel">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="3" y="4.5" width="18" height="15"/>
+              <path d="M15 4.5v15"/>
+              <path class="panel-fill" d="M15 4.5H21v15h-6z"/>
+            </svg><span class="vh" id="btn-panel-label">Hide the panel</span>
+          </button>
         <details class="settings" id="view-settings">
           <summary>Settings</summary>
           <div class="settings-body">
@@ -454,7 +472,7 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
       <p class="status" id="canvas-status" role="status"></p>
     </section>
 
-    <aside class="planner-panel" aria-label="This room's contents and sharing">
+    <aside class="planner-panel" id="planner-panel" aria-label="This room's contents and sharing">
 
       <section class="panel-section" aria-labelledby="k-furniture">
         <h2 class="kicker" id="k-furniture">Furniture</h2>
@@ -619,8 +637,14 @@ const STORE_KEY = "room-planner:v1";
 /* The margin used to be a flat 60cm, so a small room drew small: a 180x150
    room filled 28% of its own canvas with blank paper each side. Scaling it to
    the room keeps the drawing the same size on screen whatever the room. */
-const MARGIN_MIN = 34;        // cm, enough for the dimension text at any size
-const MARGIN_SHARE = 0.14;    // of the longer wall
+/* Only the top and left edges carry dimension lines, so the old symmetrical
+   margin spent a quarter of the drawing's height on blank paper the plan never
+   used. The lead edges take what the labels need (the line sits at 26, the text
+   8 beyond it, and the text itself is up to 14 units tall); the trailing edges
+   take a fraction of that, enough for the room name in an export. */
+const MARGIN_MIN = 50;        // cm, so the dimension text never clips
+const MARGIN_SHARE = 0.11;    // of the longer wall
+const MARGIN_TAIL = 0.4;      // right and bottom, as a share of the lead
 const UNDO_CAP = 50;
 const WALLS = ["N", "E", "S", "W"];
 
@@ -663,7 +687,7 @@ function defaultModel() {
     version: 1,
     title: "",
     currentRoom: "room-1",
-    settings: { snap: 5, grid: true },
+    settings: { snap: 5, grid: true, panel: true },
     rooms: [{ id: "room-1", name: "Bedroom 1", width: 400, depth: 300, cut: null, openings: [], items: [] }]
   };
 }
@@ -1202,9 +1226,10 @@ function el(name, attrs, text) {
 function renderPlan() {
   const r = room();
   const hadFocus = focusedItemId();
-  const MARGIN = Math.max(MARGIN_MIN, Math.max(r.width, r.depth) * MARGIN_SHARE);
-  const vw = r.width + MARGIN * 2, vh = r.depth + MARGIN * 2;
-  svg.setAttribute("viewBox", (-MARGIN) + " " + (-MARGIN) + " " + vw + " " + vh);
+  const lead = Math.max(MARGIN_MIN, Math.max(r.width, r.depth) * MARGIN_SHARE);
+  const tail = lead * MARGIN_TAIL;
+  const vw = r.width + lead + tail, vh = r.depth + lead + tail;
+  svg.setAttribute("viewBox", (-lead) + " " + (-lead) + " " + vw + " " + vh);
   while (svg.firstChild) svg.removeChild(svg.firstChild);
 
   const fs = Math.max(8, Math.min(14, vw / 45));   // label size in cm units
@@ -1811,6 +1836,30 @@ function setSnap(n) {
   renderSettings(); save();
 }
 
+/* Collapsing is a view preference, so it is saved with grid and snap rather
+   than with the plan itself. It never touches what is in a room. */
+function renderPanel() {
+  const on = model.settings.panel !== false;
+  const body = document.querySelector(".app-body");
+  const btn = $("btn-panel");
+  // Hiding the node focus is inside leaves the ring nowhere, so move first.
+  if (!on && document.activeElement && document.activeElement.closest
+      && document.activeElement.closest("#planner-panel")) {
+    btn.focus();
+  }
+  body.classList.toggle("is-collapsed", !on);
+  btn.setAttribute("aria-expanded", String(on));
+  $("btn-panel-label").textContent = on ? "Hide the panel" : "Show the panel";
+}
+
+function togglePanel() {
+  model.settings.panel = model.settings.panel === false;
+  renderPanel(); save();
+  say("canvas-status", model.settings.panel === false
+    ? "Panel hidden. The button brings it back."
+    : "Panel showing.");
+}
+
 function renderSettings() {
   const on = !!model.settings.grid;
   $("btn-grid").setAttribute("aria-checked", String(on));
@@ -1970,6 +2019,7 @@ function wirePanel() {
   $("btn-delete").addEventListener("click", deleteSelected);
   $("btn-undo").addEventListener("click", undo);
   $("btn-redo").addEventListener("click", redo);
+  $("btn-panel").addEventListener("click", togglePanel);
 }
 
 
@@ -2236,6 +2286,7 @@ function load() {
 function boot() {
   model = load() || defaultModel();
   renderSettings();
+  renderPanel();
   wirePanel();
   wireShare();
   renderPresetRows();

@@ -191,3 +191,14 @@ shipped a rotating CSS chevron three lines from the drawn plus invented to
 avoid one. The review caught it. Settings now uses the same drawn plus as every
 other disclosure, and so do Common sizes and Add a door or window, which had no
 mark at all and read as headings.
+
+### 12. The panel can be put away
+
+**What.** A toggle beside Settings hides the panel and gives the plan the whole
+shell. The state is saved with grid and snap.
+
+**Why.** The review asked whether the panel's permanent full-height column was
+what stopped the plan being the biggest thing on screen. Measured, it is not:
+a roughly square room is bound by the height of the window, not its width, so
+hiding the panel gains nothing. It gains 40% on a long room, which is bound by
+width. Both are worth having, and neither was obvious before measuring.

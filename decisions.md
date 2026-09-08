@@ -160,3 +160,28 @@ action undo cannot reach.
 about two screens with everything shut, and the plan still gets a fifth of the
 viewport. Both come from the decision to give the panel a permanent full-height
 column, which is a structural change rather than a fix.
+
+
+## 2026-09-08 — the collapsible panel, and what actually made the plan bigger
+
+Tried the structural change the review put as a question. The result was not
+what either of us expected, so it is worth writing down.
+
+**Hiding the panel does almost nothing for a normal room.** At 1440x900 a
+420x350 room drew 646px wide with the panel showing and 642px with it gone.
+The plan is bound by the *height* of the window, not its width: the stage is
+1.5 to one and the room is 1.15, so it letterboxes and leaves nearly 400px of
+width unused whether the panel is there or not.
+
+**It matters for a long room.** A 760x300 room is wider than the stage, so it
+is width-bound: 835px with the panel, 1171px without. That is 40%, and it is
+the case a downstairs living room actually is.
+
+**What made everything bigger was the margin.** Only the top and left edges
+carry dimension lines, but the viewBox margin was symmetrical, so a quarter of
+the drawing's height was blank paper on edges nothing used. Lead edges now take
+what the labels need and trailing edges take 40% of that. The bedroom went from
+22% of the screen to 27%, with no layout change at all.
+
+The lesson worth keeping: the panel looked like the problem because it is the
+big visible thing. The measurement said otherwise.

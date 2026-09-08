@@ -19,6 +19,9 @@ windows, then Room setup and Share, which stay folded away until you need them.
 Set the room's width and depth under Room setup. Width runs left to right,
 depth runs top to bottom, both in centimetres.
 
+The panel can be put away with the button beside Settings, which gives the
+plan the whole window. It stays put away until you bring it back.
+
 Add furniture from Common sizes or by typing a name and a size. Items land on
 the first free patch of floor. Drag them where you want them. Click one and its
 row opens up so you can type an exact position, size or turn, and Rotate,
