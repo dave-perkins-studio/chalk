@@ -69,6 +69,9 @@
 .planner-panel{min-width:0}
 .panel-section{padding-bottom:var(--u2)}
 .panel-section > .kicker{margin-bottom:var(--u-half)}
+/* The kickers are the page's heading outline, so they are h1/h2 elements.
+   The class already carries the look; this only undoes the UA margins. */
+h1.kicker,h2.kicker{margin-top:0}
 
 .field-row{display:flex;gap:var(--u-half);flex-wrap:wrap}
 .field{display:block;margin-bottom:var(--u-half);flex:1 1 90px;min-width:0}
@@ -90,7 +93,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{
   box-shadow:0 3px 0 var(--focus-ink);border-color:var(--focus-ink)}
 
 .btn-small{font-family:var(--wayfind);font-weight:500;font-size:14px;line-height:1;
-  display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:9px 12px;
+  display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:13px 14px;
   border-radius:0;cursor:pointer;background:var(--paper-tint);color:var(--blue);
   border:1px solid var(--rule);border-bottom:2px solid var(--blue);
   transition:border-color var(--box-fade) ease-out,color var(--box-fade) ease-out,
@@ -119,7 +122,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{
 details.presets{border-top:1px dashed var(--rule-faint);padding-top:var(--u-half)}
 details.presets summary{font-family:var(--wayfind);font-weight:500;font-size:14px;
   letter-spacing:.06em;text-transform:uppercase;color:var(--blue);cursor:pointer;
-  padding:8px 2px;min-height:36px;display:flex;align-items:center}
+  padding:12px 2px;min-height:44px;display:flex;align-items:center}
 details.presets summary:focus-visible{outline:3px solid transparent;color:var(--focus-ink);
   background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink)}
 
@@ -154,9 +157,11 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
 
   <main id="main" class="hold planner">
 
+    <h1 class="vh">Room planner</h1>
+
     <section class="planner-canvas" aria-label="Room plan">
       <div class="canvas-sticky">
-      <p class="kicker" id="plan-caption">Bedroom 1 &middot; 4.00 &times; 3.00 m</p>
+      <h2 class="kicker" id="plan-caption">Bedroom 1 &middot; 4.00 &times; 3.00 m</h2>
 
       <div class="toolbar" role="toolbar" aria-label="Plan controls">
         <button type="button" class="btn-small" id="btn-grid" aria-pressed="true">Grid</button>
@@ -168,7 +173,7 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
       </div>
 
       <svg id="plan" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"
-           role="img" aria-labelledby="plan-caption"></svg>
+           role="img" aria-label="Room plan"></svg>
       <p class="status" id="canvas-status" role="status"></p>
       </div>
     </section>
@@ -176,7 +181,7 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
     <aside class="planner-panel" aria-label="Furniture and sharing">
 
       <section class="panel-section" aria-labelledby="k-room">
-        <p class="kicker" id="k-room">Room</p>
+        <h2 class="kicker" id="k-room">Room</h2>
         <label class="field"><span>Name</span>
           <input type="text" id="room-name" autocomplete="off"></label>
         <div class="field-row">
@@ -188,7 +193,7 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
       </section>
 
       <section class="panel-section" aria-labelledby="k-openings">
-        <p class="kicker" id="k-openings">Doors and windows</p>
+        <h2 class="kicker" id="k-openings">Doors and windows</h2>
         <ul class="rows" id="opening-rows"></ul>
         <div class="field-row">
           <label class="field"><span>Type</span>
@@ -215,12 +220,12 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
       </section>
 
       <section class="panel-section" aria-labelledby="k-furniture">
-        <p class="kicker" id="k-furniture">Furniture</p>
+        <h2 class="kicker" id="k-furniture">Furniture</h2>
         <ul class="rows" id="item-rows"></ul>
       </section>
 
       <section class="panel-section" aria-labelledby="k-selected" id="selected-section" hidden>
-        <p class="kicker" id="k-selected">Selected item</p>
+        <h2 class="kicker" id="k-selected">Selected item</h2>
         <label class="field"><span>Name</span>
           <input type="text" id="sel-name" autocomplete="off"></label>
         <div class="field-row">
@@ -245,7 +250,7 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
       </section>
 
       <section class="panel-section" aria-labelledby="k-add">
-        <p class="kicker" id="k-add">Add furniture</p>
+        <h2 class="kicker" id="k-add">Add furniture</h2>
         <label class="field"><span>Name</span>
           <input type="text" id="add-name" autocomplete="off"></label>
         <div class="field-row">
@@ -263,7 +268,7 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
       </section>
 
       <section class="panel-section" aria-labelledby="k-share">
-        <p class="kicker" id="k-share">Share</p>
+        <h2 class="kicker" id="k-share">Share</h2>
         <div class="share-buttons">
           <button type="button" class="btn-small" id="copy-md">Copy text</button>
           <button type="button" class="btn-small ghost" id="download-md">Download .md</button>
@@ -663,6 +668,42 @@ function parsePlan(text) {
 
 const SVGNS = "http://www.w3.org/2000/svg";
 
+/* Every render tears down the node that had focus, which dropped a keyboard
+   user back to the body with no ring anywhere on the page. Each rebuild
+   remembers what was focused and puts it back: an item by its id, a list row
+   by its position, clamped when the row it was on has just been removed. */
+
+function focusedItemId() {
+  const a = document.activeElement;
+  const g = a && a.closest ? a.closest("g.item") : null;
+  return g ? g.dataset.id : null;
+}
+
+function restoreItemFocus(id) {
+  if (!id) return;
+  const g = svg.querySelector('g.item[data-id="' + id + '"]');
+  if (g) { g.focus(); return; }
+  const next = svg.querySelector("g.item");
+  if (next) next.focus();
+}
+
+function focusedRow(ul) {
+  const a = document.activeElement;
+  const li = a && a.closest ? a.closest("li") : null;
+  if (!li || li.parentElement !== ul) return null;
+  return { index: [...ul.children].indexOf(li), main: a.classList.contains("row-main") };
+}
+
+function restoreRowFocus(ul, at) {
+  if (!at) return;
+  const rows = [...ul.children].filter(li => li.querySelector("button"));
+  if (!rows.length) return;
+  const li = rows[Math.min(at.index, rows.length - 1)];
+  const btn = li.querySelector(at.main ? ".row-main" : "button") || li.querySelector("button");
+  if (btn) btn.focus();
+}
+
+
 function el(name, attrs, text) {
   const n = document.createElementNS(SVGNS, name);
   for (const k in attrs) if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, attrs[k]);
@@ -672,6 +713,7 @@ function el(name, attrs, text) {
 
 function renderPlan() {
   const r = room();
+  const hadFocus = focusedItemId();
   const vw = r.width + MARGIN * 2, vh = r.depth + MARGIN * 2;
   svg.setAttribute("viewBox", (-MARGIN) + " " + (-MARGIN) + " " + vw + " " + vh);
   while (svg.firstChild) svg.removeChild(svg.firstChild);
@@ -704,6 +746,7 @@ function renderPlan() {
   // plan is being used to answer.
   r.openings.forEach((op, i) => renderOpening(op, i, r));
 
+  restoreItemFocus(hadFocus);
   $("plan-caption").textContent = r.name + " · " + metres(r.width) + " × " + metres(r.depth);
   svg.setAttribute("aria-label", r.name + ", " + metres(r.width) + " by " + metres(r.depth)
     + ", " + r.items.filter(i => i.placed).length + " items placed");
@@ -978,6 +1021,7 @@ function deleteSelected() {
 
 function renderItemRows() {
   const r = room(), ul = $("item-rows");
+  const at = focusedRow(ul);
   ul.textContent = "";
   if (!r.items.length) {
     const li = document.createElement("li");
@@ -1023,10 +1067,12 @@ function renderItemRows() {
     li.appendChild(b); li.appendChild(t);
     ul.appendChild(li);
   });
+  restoreRowFocus(ul, at);
 }
 
 function renderOpeningRows() {
   const r = room(), ul = $("opening-rows");
+  const at = focusedRow(ul);
   ul.textContent = "";
   r.openings.forEach((op, i) => {
     const li = document.createElement("li");
@@ -1055,6 +1101,7 @@ function renderOpeningRows() {
     li.appendChild(b); li.appendChild(del);
     ul.appendChild(li);
   });
+  restoreRowFocus(ul, at);
 }
 
 function renderPresetRows() {
