@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Chalk">
+  <!--
+    The Chalk mark, drawn to sit beside Hum, Redpen and Help Me Listen: same
+    tile, same 0.225 corner radius, same shallow three-stop gradient with the
+    light at the top, same paper stroke with round caps and joins, same trick
+    of fitting the mark to its own ink rather than to the box it was drawn in.
+
+    The mark is an L-shaped room with one piece of furniture in it. A plain
+    rectangle would read as a box, a frame or a button; the notched corner is
+    what makes it a floor plan at a glance, and it is the shape this app added
+    support for. The inner rectangle sits against two walls, which is where
+    furniture actually goes and what stops the outline reading as a window.
+
+    Excursion's taupe, taken deeper the way Redpen takes the rose deeper. Hum
+    and Help Me Listen are both blue and Redpen is rose, so the fourth tile in
+    the Dock had to be neither. Taupe on its own is the beige smudge the other
+    icons warn about, which is why this is the deep end of it.
+
+    Like the others, this drops Excursion 10.1: a cream tile with a totem on it
+    disappears at 32 points.
+  -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8A7F6E"/>
+      <stop offset="0.55" stop-color="#6A6053"/>
+      <stop offset="1" stop-color="#494136"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="115" ry="115" fill="url(#tile)"/>
+
+  <g fill="none" stroke="#F7F2E9" stroke-linecap="round" stroke-linejoin="round">
+    <!-- The room: a rectangle with the top-right corner taken out. -->
+    <path d="M120 132 H300 V212 H392 V380 H120 Z" stroke-width="26"/>
+    <!-- A piece of furniture, pushed into the bottom-left corner. -->
+    <rect x="168" y="286" width="120" height="46" stroke-width="20"/>
+  </g>
+</svg>

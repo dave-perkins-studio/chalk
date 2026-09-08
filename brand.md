@@ -121,3 +121,33 @@ nothing:
 
 That's deliberate. A tool you use for an hour shouldn't have charm devices in
 it that you have to look past every time.
+
+### 7. Its own icon and name, not the Perkins totem
+
+**What.** The masthead carries a tile icon and the name Chalk, with 'Room
+planner' beside it in the wayfinding face. The totem plate is gone from this
+app.
+
+**Why.** Hum, Redpen and Help Me Listen all do this, and their icon files say
+why: at 32 points a cream tile with a totem on it reads as a beige smudge. A
+browser tab is the same problem. The tile follows the family exactly, same
+0.225 corner radius, same shallow three-stop gradient with the light at the
+top, same paper stroke with round caps, same trick of fitting the mark to its
+own ink. The mark is an L-shaped room with one piece of furniture against two
+walls: a plain rectangle would read as a box or a button, and the notch is what
+makes it a floor plan at a glance.
+
+**The hue.** Excursion's taupe, taken deeper the way Redpen takes the rose
+deeper. Hum and Help Me Listen are both blue and Redpen is rose, so the fourth
+tile in the Dock had to be neither, and plain taupe is the beige smudge the
+others warn about.
+
+### 8. Contextual actions, and settings behind a toggle
+
+**What.** Rotate, Duplicate and Delete only appear once something is selected.
+Grid and snap sit behind a quiet Settings toggle at the end of the toolbar.
+
+**Why.** Six buttons of equal weight said all six were equally useful. Three of
+them do nothing without a selection, and two change how the plan is drawn
+rather than what is in it. Undo is the only one that always applies, so it is
+the only one always shown.

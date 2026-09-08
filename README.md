@@ -1,6 +1,6 @@
-# Room planner
+# Chalk
 
-A flat, to-scale plan of a room, so you can work out whether the sofa fits
+A room planner. A flat, to-scale plan of a room, so you can work out whether the sofa fits
 before it turns up on a lorry.
 
 Draw the room in centimetres, add furniture at its real size, then drag the
@@ -21,7 +21,9 @@ depth runs top to bottom, both in centimetres.
 
 Add furniture from Common sizes or by typing a name and a size. Items land on
 the first free patch of floor. Drag them where you want them. Click one and its
-row opens up so you can type an exact position, size or turn.
+row opens up so you can type an exact position, size or turn, and Rotate,
+Duplicate and Delete appear above the plan. Grid and snap live under Settings,
+at the right of that row.
 
 For an L-shaped room, cut a corner under Room setup: pick which one, then give
 the notch its two lengths. That covers a chimney breast, a stair bulkhead or a room that

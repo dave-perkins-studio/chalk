@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Room planner &middot; Perkins</title>
+<title>Chalk &middot; Room planner</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inclusive+Sans:wght@300;400&family=Jost:wght@500&family=Petrona:wght@400;500;600&display=swap" rel="stylesheet">
@@ -68,7 +69,44 @@
 /* The first thing a family member sees on a shared, empty plan. */
 .empty-note{font-family:var(--reading);font-size:15px;line-height:1.5;
   color:var(--ink-muted);margin:var(--u-half) 0 0;max-width:52ch;
-  border-left:3px solid var(--taupe);padding-left:var(--u-half)}
+  border-left:3px solid var(--taupe);padding-left:var(--u)}
+
+/* The app carries its own mark and name, the way Hum and Redpen do, rather
+   than the Perkins totem: an app in the Dock or a browser tab is found by its
+   icon, and a cream tile with a totem on it vanishes at that size. */
+.masthead .app-icon{display:block;border-radius:7px}
+.masthead .app-name{font-family:var(--content);font-weight:600;font-size:21px;
+  line-height:1;color:var(--ink)}
+.masthead .app-what{font-family:var(--wayfind);font-weight:500;font-size:13px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-muted)}
+.masthead:focus-visible .app-name,.masthead:focus-visible .app-what{color:var(--focus-ink)}
+
+/* Rotate, Duplicate and Delete act on a selection, so they are not offered
+   until there is one. Nothing else in the toolbar moves when they appear:
+   they sit in their own group at the head of the row. */
+.tool-selected{display:flex;gap:var(--u-half)}
+
+/* Grid and Snap change how the plan is drawn rather than what is in it, so
+   they sit behind a quiet toggle at the end of the row instead of leading it. */
+.settings{margin-left:auto;position:relative}
+.settings > summary{font-family:var(--wayfind);font-weight:500;font-size:14px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);
+  cursor:pointer;min-height:44px;padding:13px 4px;display:flex;align-items:center;
+  gap:8px;list-style:none}
+.settings > summary::-webkit-details-marker{display:none}
+.settings > summary::after{content:"";width:9px;height:9px;flex:0 0 auto;
+  border-right:2px solid currentColor;border-bottom:2px solid currentColor;
+  transform:translateY(-2px) rotate(45deg)}
+.settings[open] > summary::after{transform:translateY(2px) rotate(-135deg)}
+.settings > summary:hover{color:var(--edge-deep)}
+.settings > summary:focus-visible{outline:3px solid transparent;color:var(--focus-ink);
+  background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink)}
+.settings-body{display:flex;gap:var(--u-half);padding:var(--u-half) 0}
+@media (min-width:900px){
+  .settings-body{position:absolute;right:0;top:100%;z-index:5;background:var(--paper);
+    border:1px solid var(--rule);border-bottom:2px solid var(--blue);
+    padding:var(--u-half);white-space:nowrap}
+}
 
 .grid-10,.grid-100{stroke:var(--grid);fill:none}
 .grid-100{stroke:var(--rule-faint)}
@@ -256,9 +294,10 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
 <div class="page app">
 
   <header class="app-header">
-    <a class="masthead" href="./" aria-label="Perkins Room planner">
-      <span class="plate">Perkins</span>
-      <span class="co">Room planner</span>
+    <a class="masthead" href="./" aria-label="Chalk, a room planner">
+      <img class="app-icon" src="icon.svg" alt="" width="34" height="34">
+      <span class="app-name">Chalk</span>
+      <span class="app-what">Room planner</span>
     </a>
     <div class="room-switch">
       <label for="room-pick">Room</label>
@@ -280,12 +319,19 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
         then drag it around the plan.</p>
 
       <div class="toolbar" role="toolbar" aria-label="Plan controls">
-        <button type="button" class="btn-small" id="btn-grid" aria-pressed="true">Grid</button>
-        <button type="button" class="btn-small" id="btn-snap" aria-pressed="true">Snap 5 cm</button>
-        <button type="button" class="btn-small ghost" id="btn-rotate">Rotate</button>
-        <button type="button" class="btn-small ghost" id="btn-duplicate">Duplicate</button>
-        <button type="button" class="btn-small ghost" id="btn-delete">Delete</button>
+        <div class="tool-selected" id="tool-selected" hidden>
+          <button type="button" class="btn-small ghost" id="btn-rotate">Rotate</button>
+          <button type="button" class="btn-small ghost" id="btn-duplicate">Duplicate</button>
+          <button type="button" class="btn-small ghost" id="btn-delete">Delete</button>
+        </div>
         <button type="button" class="btn-small ghost" id="btn-undo">Undo</button>
+        <details class="settings" id="view-settings">
+          <summary>Settings</summary>
+          <div class="settings-body">
+            <button type="button" class="btn-small" id="btn-grid" aria-pressed="true">Grid</button>
+            <button type="button" class="btn-small" id="btn-snap" aria-pressed="true">Snap 5 cm</button>
+          </div>
+        </details>
       </div>
 
       <div class="canvas-stage">
@@ -1582,7 +1628,22 @@ function renderPresetRows() {
   });
 }
 
+/* The three actions that need a selection are hidden until there is one. If
+   focus is sitting on one of them as it goes, hand focus on first: hiding the
+   node the browser thinks is focused leaves no ring anywhere on the page. */
+function renderToolbar() {
+  const group = $("tool-selected");
+  const show = !!selectedItem();
+  if (group.hidden === !show) return;
+  if (!show && document.activeElement && document.activeElement.closest
+      && document.activeElement.closest("#tool-selected")) {
+    $("btn-undo").focus();
+  }
+  group.hidden = !show;
+}
+
 function renderSelectedForm() {
+  renderToolbar();
   const it = selectedItem();
   const sec = $("selected-section");
   if (!it) {
