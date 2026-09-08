@@ -22,6 +22,10 @@ depth runs top to bottom, both in centimetres.
 The panel can be put away with the button beside Settings, which gives the
 plan the whole window. It stays put away until you bring it back.
 
+Under Share you can name the house, send this room on its own, or send every
+room in one file. Loading works either way round: paste a single room or a
+whole house and it takes whichever it is given.
+
 Add furniture from Common sizes or by typing a name and a size. Items land on
 the first free patch of floor. Drag them where you want them. Click one and its
 row opens up so you can type an exact position, size or turn, and Rotate,
@@ -33,9 +37,11 @@ For an L-shaped room, cut a corner under Room setup: pick which one, then give
 the notch its two lengths. That covers a chimney breast, a stair bulkhead or a room that
 wraps round one. Set the corner back to None to get the rectangle again.
 
-Doors and windows go on a named wall, measured from a corner: north and south
-from the left, east and west from the top. Two openings overlapping on the same
-wall are flagged. A door draws its swing, and anything
+Doors and windows go on a wall, measured from a corner: top and bottom from the
+left, left and right from the top. Drag one along its wall, or round onto any
+other wall, and the measurements follow. Click one and its row opens so you can
+type an exact position instead, which moves it as you type. Two openings
+overlapping on the same wall are flagged. A door draws its swing, and anything
 sitting in the way gets flagged. Cutting a corner shortens two of the walls, so
 an opening left stranded past the end of one is flagged with the range that
 wall now covers.

@@ -202,3 +202,24 @@ what stopped the plan being the biggest thing on screen. Measured, it is not:
 a roughly square room is bound by the height of the window, not its width, so
 hiding the panel gains nothing. It gains 40% on a long room, which is bound by
 width. Both are worth having, and neither was obvious before measuring.
+
+### 13. A drawn mark on every dropdown
+
+**What.** Selects carry a small downward arrow, drawn in the same line-work as
+undo and redo, masked so it takes its colour from the field.
+
+**Why.** `appearance:none` took the platform's arrow away and nothing replaced
+it, so a dropdown was indistinguishable from a text field. A bare chevron is
+ruled out by deviation 4, but an arrow with a shaft is the same mark language
+the toolbar already uses. As a mask rather than a baked image it follows the
+dark theme and the yellow focus field without a second copy.
+
+### 14. Compass names dropped from the wall picker
+
+**What.** The wall options read Top, Right, Bottom and Left rather than North,
+East, South and West. The status line and the rows follow.
+
+**Why.** You are looking down at a drawing, not standing in the room, so the
+compass was a translation step doing no work. The file format still stores the
+letters N, E, S and W, and the parser still accepts the compass words, so plans
+written before this still load.

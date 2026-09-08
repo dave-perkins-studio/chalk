@@ -22,6 +22,11 @@
    cut sizes, with the last L-shape's numbers left in them. */
 [hidden]{display:none !important}
 
+:root{--caret-mask:url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" \
+stroke="black" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">\
+<path d="M6 2.2V8.6"/><path d="M3 5.9 6 8.9 9 5.9"/></svg>')}
+
 /* The app shell made the panel's scrollbar the most visible piece of chrome on
    the page, and it was the OS default grey. Selection and caret were the
    browser's too. */
@@ -197,7 +202,8 @@ input,textarea,select{caret-color:var(--ink)}
 .opening-gap{stroke:var(--paper);stroke-width:4;fill:none}
 .opening-leaf{stroke:var(--ink-muted);stroke-width:1.5;fill:none}
 .opening-arc{stroke:var(--ink-faint);stroke-width:1;fill:none;stroke-dasharray:6 5}
-.opening-hit{fill:transparent;stroke:transparent;stroke-width:14;cursor:pointer}
+.opening-hit{fill:transparent;stroke:transparent;stroke-width:22;cursor:grab}
+.opening-hit:active{cursor:grabbing}
 .opening.is-off-wall .opening-window,.opening.is-off-wall .opening-leaf{stroke:var(--berry)}
 .opening.is-off-wall .opening-arc{stroke:var(--berry)}
 /* Sibling of .is-off-wall, same grammar: two openings sharing a stretch of
@@ -247,7 +253,20 @@ input[type=text],input[type=number],select,textarea{
   -webkit-appearance:none;appearance:none;
   transition:border-color var(--box-fade) ease-out}
 textarea{min-height:96px;resize:vertical;font-size:15px}
-select{background-image:none}
+/* appearance:none took the platform's arrow away and nothing replaced it, so a
+   dropdown looked exactly like a text field. The mark is an arrow with a shaft,
+   drawn in the same line-work as undo and redo; a bare chevron is ruled out by
+   the brand. It is a mask, so it takes its colour from the field and follows
+   both the dark theme and the yellow focus field without a second copy. */
+select{background-image:none;padding-right:38px}
+.select-wrap{position:relative;display:block}
+.select-wrap::after{content:"";position:absolute;right:12px;top:50%;
+  width:13px;height:13px;margin-top:-6px;pointer-events:none;
+  background-color:var(--ink-muted);
+  -webkit-mask:var(--caret-mask) center/13px 13px no-repeat;
+          mask:var(--caret-mask) center/13px 13px no-repeat}
+.select-wrap:hover::after{background-color:var(--edge-deep)}
+.select-wrap:focus-within::after{background-color:var(--focus-ink)}
 input:hover:not(:focus-visible),select:hover:not(:focus-visible),
 textarea:hover:not(:focus-visible){border-color:var(--edge-deep)}
 input:focus-visible,select:focus-visible,textarea:focus-visible{
@@ -398,7 +417,7 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
     </a>
     <div class="room-switch">
       <label for="room-pick">Room</label>
-      <select id="room-pick"></select>
+      <span class="select-wrap"><select id="room-pick"></select></span>
       <button type="button" class="btn-small ghost" id="room-new">New room</button>
     </div>
   </header>
@@ -496,10 +515,10 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
             <label class="field"><span>Y, cm</span>
               <input type="number" id="sel-y" step="1"></label>
             <label class="field"><span>Turn</span>
-              <select id="sel-r">
+              <span class="select-wrap"><select id="sel-r">
                 <option value="0">0&deg;</option><option value="90">90&deg;</option>
                 <option value="180">180&deg;</option><option value="270">270&deg;</option>
-              </select></label>
+              </select></span></label>
           </div>
           <label class="field"><span>Notes</span>
             <input type="text" id="sel-notes" autocomplete="off"></label>
@@ -527,16 +546,49 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
       <section class="panel-section" aria-labelledby="k-openings">
         <h2 class="kicker" id="k-openings">Doors and windows</h2>
         <ul class="rows" id="opening-rows"></ul>
+
+        <!-- The selected opening's fields, parked here so the ids survive and
+             moved into its row by renderOpeningRows, exactly as furniture. -->
+        <div id="opening-editor" class="row-editor" role="group"
+             aria-label="Selected door or window" hidden>
+          <div class="field-row">
+            <label class="field"><span>Type</span>
+              <span class="select-wrap"><select id="oe-kind">
+                <option value="door">Door</option><option value="window">Window</option>
+              </select></span></label>
+            <label class="field"><span>Wall</span>
+              <span class="select-wrap"><select id="oe-wall">
+                <option value="N">Top</option><option value="E">Right</option>
+                <option value="S">Bottom</option><option value="W">Left</option>
+              </select></span></label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>From corner, cm</span>
+              <input type="number" id="oe-offset" min="0" step="1"></label>
+            <label class="field"><span>Width, cm</span>
+              <input type="number" id="oe-width" min="10" step="1"></label>
+          </div>
+          <div class="field-row" id="oe-door-fields">
+            <label class="field"><span>Swings</span>
+              <span class="select-wrap"><select id="oe-swing">
+                <option value="in">Into room</option><option value="out">Out</option>
+              </select></span></label>
+            <label class="field"><span>Hinge</span>
+              <span class="select-wrap"><select id="oe-hinge">
+                <option value="left">Left</option><option value="right">Right</option>
+              </select></span></label>
+          </div>
+        </div>
         <details class="presets" id="add-opening">
           <summary>Add a door or window</summary>
         <div class="field-row">
           <label class="field"><span>Type</span>
-            <select id="op-kind"><option value="door">Door</option><option value="window">Window</option></select></label>
+            <span class="select-wrap"><select id="op-kind"><option value="door">Door</option><option value="window">Window</option></select></span></label>
           <label class="field"><span>Wall</span>
-            <select id="op-wall">
-              <option value="N">North, top</option><option value="E">East, right</option>
-              <option value="S">South, bottom</option><option value="W">West, left</option>
-            </select></label>
+            <span class="select-wrap"><select id="op-wall">
+              <option value="N">Top</option><option value="E">Right</option>
+              <option value="S">Bottom</option><option value="W">Left</option>
+            </select></span></label>
         </div>
         <div class="field-row">
           <label class="field"><span>From corner, cm</span>
@@ -546,9 +598,9 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
         </div>
         <div class="field-row" id="op-door-fields">
           <label class="field"><span>Swings</span>
-            <select id="op-swing"><option value="in">Into room</option><option value="out">Out</option></select></label>
+            <span class="select-wrap"><select id="op-swing"><option value="in">Into room</option><option value="out">Out</option></select></span></label>
           <label class="field"><span>Hinge</span>
-            <select id="op-hinge"><option value="left">Left</option><option value="right">Right</option></select></label>
+            <span class="select-wrap"><select id="op-hinge"><option value="left">Left</option><option value="right">Right</option></select></span></label>
         </div>
         <button type="button" class="btn-small" id="op-add">Add opening</button>
         </details>
@@ -567,13 +619,13 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
           </div>
           <p class="sub-label">Cut a corner</p>
           <label class="field"><span>Corner</span>
-            <select id="cut-corner">
+            <span class="select-wrap"><select id="cut-corner">
               <option value="">None, it's a rectangle</option>
               <option value="NW">Top left</option>
               <option value="NE">Top right</option>
               <option value="SE">Bottom right</option>
               <option value="SW">Bottom left</option>
-            </select></label>
+            </select></span></label>
           <div class="field-row" id="cut-size" hidden>
             <label class="field"><span>Across, cm</span>
               <input type="number" id="cut-w" min="1" step="1"></label>
@@ -588,7 +640,13 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
       <details class="place" id="place-share">
         <summary><h2 class="kicker">Share</h2></summary>
         <div class="place-body">
-          <p class="sub-label">This room</p>
+          <label class="field"><span>House name</span>
+            <input type="text" id="house-name" autocomplete="off"
+                   placeholder="14 Somewhere Road"></label>
+          <p class="hint">The name goes at the top of a whole-house file, and
+            names the file you download.</p>
+
+          <p class="sub-label">Send this room</p>
           <div class="share-buttons">
             <button type="button" class="btn-small" id="copy-md">Copy text</button>
             <button type="button" class="btn-small ghost" id="download-md">Download .md</button>
@@ -596,14 +654,17 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
             <button type="button" class="btn-small ghost" id="download-png">Download PNG</button>
           </div>
 
-          <p class="sub-label">Every room</p>
-          <label class="field"><span>House name</span>
-            <input type="text" id="house-name" autocomplete="off"></label>
+          <p class="sub-label">Send the whole house</p>
           <div class="share-buttons">
-            <button type="button" class="btn-small" id="copy-all">Copy all rooms</button>
-            <button type="button" class="btn-small ghost" id="download-all">Download all rooms</button>
+            <button type="button" class="btn-small" id="copy-all">Copy every room</button>
+            <button type="button" class="btn-small ghost" id="download-all">Download every room</button>
           </div>
-          <p class="hint" id="paste-hint">Paste a plan someone has sent you, or press the paste shortcut anywhere on this page.</p>
+
+          <p class="sub-label">Load a plan</p>
+          <p class="hint" id="paste-hint">One room or a whole house, whichever you
+            were sent. Paste it below, or press the paste shortcut anywhere on
+            this page. A room whose name matches one of yours is replaced, and
+            the rest are added.</p>
           <label class="field"><span>Paste a plan</span>
             <textarea id="paste-box" spellcheck="false"></textarea></label>
           <button type="button" class="btn-small" id="load-md">Load plan</button>
@@ -1187,7 +1248,7 @@ function focusedRow(ul) {
   const a = document.activeElement;
   const li = a && a.closest ? a.closest("li") : null;
   if (!li || li.parentElement !== ul) return null;
-  if (a.closest("#selected-section")) return { editor: a.id, caret: caretOf(a) };
+  if (a.closest("#selected-section") || a.closest("#opening-editor")) return { editor: a.id, caret: caretOf(a) };
   return { index: [...ul.children].indexOf(li), main: a.classList.contains("row-main") };
 }
 
@@ -1330,7 +1391,7 @@ function renderOpening(op, i, r) {
   }
 
   const hit = el("line", { x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, class: "opening-hit" });
-  hit.addEventListener("pointerdown", (e) => { e.stopPropagation(); selectOpening(i); });
+  hit.addEventListener("pointerdown", (e) => { e.stopPropagation(); startOpeningDrag(e, i); });
   g.appendChild(hit);
   svg.appendChild(g);
 }
@@ -1496,6 +1557,106 @@ function select(id, focusCanvas) {
   announceSelection();
 }
 
+/* The panel used to be add-only, so the way to move a door was to remove it
+   and add another. These fields edit the opening in place, and every one of
+   them redraws as you type. */
+function renderOpeningForm() {
+  const op = room().openings[selectedOpening];
+  const sec = $("opening-editor");
+  if (!op) {
+    if (document.activeElement && document.activeElement.closest
+        && document.activeElement.closest("#opening-editor")) {
+      const back = $("opening-rows").querySelector(".row-main");
+      if (back) back.focus();
+    }
+    sec.hidden = true;
+    return;
+  }
+  sec.hidden = false;
+  $("oe-kind").value = op.kind;
+  $("oe-wall").value = op.wall;
+  if (document.activeElement !== $("oe-offset")) $("oe-offset").value = op.offset;
+  if (document.activeElement !== $("oe-width")) $("oe-width").value = op.width;
+  $("oe-swing").value = op.swing || "in";
+  $("oe-hinge").value = op.hinge || "left";
+  $("oe-door-fields").hidden = op.kind !== "door";
+}
+
+function editOpening(fn) {
+  const op = room().openings[selectedOpening];
+  if (!op) return;
+  beginEdit();
+  fn(op);
+  renderPlan(); renderOpeningRows(); save();
+  announceOpening();
+}
+
+function announceOpening() {
+  const op = room().openings[selectedOpening];
+  if (!op) return;
+  const r = room(), bad = openingOffWall(op, r) ? " · past the end of that wall" : "";
+  say("canvas-status", (op.kind === "door" ? "Door" : "Window") + " · " + wallName(op.wall)
+    + " wall · " + op.width + " cm · " + op.offset + " cm from the corner" + bad, !!bad);
+}
+
+function removeOpening(i) {
+  pushUndo();
+  const r = room(), op = r.openings[i];
+  r.openings.splice(i, 1);
+  if (selectedOpening === i) selectedOpening = -1;
+  else if (selectedOpening > i) selectedOpening--;
+  renderAll(); save();
+  say("canvas-status", (op.kind === "door" ? "Door" : "Window") + " removed. " + MOD + " + Z puts it back.");
+}
+
+/* Which wall is the pointer nearest, and how far along it. The door follows
+   the pointer round a corner rather than being tied to the wall it started on,
+   because "move it to the other side" is a thing you want to just do. */
+function nearestWall(p, r) {
+  const d = { N: Math.abs(p.y), S: Math.abs(p.y - r.depth),
+              W: Math.abs(p.x), E: Math.abs(p.x - r.width) };
+  return WALLS.reduce((best, w) => d[w] < d[best] ? w : best, "N");
+}
+
+function offsetOnWall(p, wall, op, r) {
+  const along = (wall === "N" || wall === "S") ? p.x : p.y;
+  const span = wallSpan(r, wall);
+  const raw = snap(along - op.width / 2, false);
+  return Math.round(Math.min(Math.max(raw, span.lo), Math.max(span.lo, span.hi - op.width)));
+}
+
+let opDrag = null;
+
+function startOpeningDrag(evt, i) {
+  selectOpening(i);
+  const r = room(), op = r.openings[i];
+  if (!op) return;
+  opDrag = { i, from: JSON.stringify(model), moved: false };
+  try { evt.target.setPointerCapture(evt.pointerId); } catch (e) {}
+}
+
+svg.addEventListener("pointermove", (evt) => {
+  if (!opDrag) return;
+  const r = room(), op = r.openings[opDrag.i];
+  if (!op) return;
+  const p = svgPoint(evt);
+  const wall = nearestWall(p, r);
+  const offset = offsetOnWall(p, wall, op, r);
+  if (op.wall === wall && op.offset === offset) return;
+  if (!opDrag.moved) { pushUndo(opDrag.from); opDrag.moved = true; }
+  op.wall = wall; op.offset = offset;
+  renderPlan(); renderOpeningRows();
+});
+
+function endOpeningDrag(evt) {
+  if (!opDrag) return;
+  try { evt.target.releasePointerCapture(evt.pointerId); } catch (e) {}
+  if (opDrag.moved) { save(); announceOpening(); }
+  opDrag = null;
+}
+svg.addEventListener("pointerup", endOpeningDrag);
+svg.addEventListener("pointercancel", endOpeningDrag);
+
 function selectOpening(i) {
   selectedOpening = i; selectedId = null;
   renderPlan(); renderItemRows(); renderSelectedForm(); renderOpeningRows();
@@ -1505,7 +1666,7 @@ function selectOpening(i) {
 }
 
 function wallName(w) {
-  return { N: "north", E: "east", S: "south", W: "west" }[w] || w;
+  return { N: "top", E: "right", S: "bottom", W: "left" }[w] || w;
 }
 
 function announceSelection() {
@@ -1741,6 +1902,10 @@ function refreshItemRows(r, ul) {
 function renderOpeningRows() {
   const r = room(), ul = $("opening-rows");
   const at = focusedRow(ul);
+  const editor = $("opening-editor");
+  if (editor.parentElement && editor.parentElement.closest("#opening-rows")) {
+    ul.parentElement.appendChild(editor);
+  }
   ul.textContent = "";
   r.openings.forEach((op, i) => {
     const li = document.createElement("li");
@@ -1768,6 +1933,20 @@ function renderOpeningRows() {
       b.appendChild(f);
     }
     b.addEventListener("click", () => selectOpening(i));
+
+    if (i === selectedOpening) {
+      renderOpeningForm();
+      li.appendChild(b);
+      li.appendChild(editor);
+      const d2 = document.createElement("button");
+      d2.type = "button"; d2.className = "btn-small ghost";
+      d2.textContent = "Remove";
+      d2.setAttribute("aria-label", "Remove the " + op.kind + " on the " + wallName(op.wall) + " wall");
+      d2.addEventListener("click", () => removeOpening(i));
+      li.appendChild(d2);
+      ul.appendChild(li);
+      return;
+    }
 
     const del = document.createElement("button");
     del.type = "button"; del.className = "btn-small ghost";
@@ -1978,6 +2157,22 @@ function wirePanel() {
   $("op-kind").addEventListener("change", () => {
     $("op-door-fields").hidden = $("op-kind").value !== "door";
   });
+  $("oe-kind").addEventListener("change", (e) => editOpening(op => {
+    op.kind = e.target.value;
+    if (op.kind === "door") { op.swing = op.swing || "in"; op.hinge = op.hinge || "left"; }
+  }));
+  $("oe-wall").addEventListener("change", (e) => editOpening(op => { op.wall = e.target.value; }));
+  $("oe-swing").addEventListener("change", (e) => editOpening(op => { op.swing = e.target.value; }));
+  $("oe-hinge").addEventListener("change", (e) => editOpening(op => { op.hinge = e.target.value; }));
+  $("oe-offset").addEventListener("input", (e) => {
+    const n = parseInt(e.target.value, 10);
+    if (!isNaN(n)) editOpening(op => { op.offset = n; });
+  });
+  $("oe-width").addEventListener("input", (e) => {
+    const n = parseInt(e.target.value, 10);
+    if (n > 0) editOpening(op => { op.width = n; });
+  });
+
   $("op-add").addEventListener("click", () => {
     const r = room();
     const kind = $("op-kind").value, wall = $("op-wall").value;
