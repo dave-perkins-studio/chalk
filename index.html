@@ -17,13 +17,17 @@
 
 .planner{padding-top:var(--u2);padding-bottom:var(--u4)}
 @media (min-width:900px){
-  .planner{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--u2);align-items:start}
+  .planner{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--u2)}
+  /* The panel is a long scroll, so the plan stays put while you work down it.
+     The column has to stretch to the row's height for the sticky child to have
+     anywhere to travel, which is why the wrapper exists at all. */
+  .canvas-sticky{position:sticky;top:var(--u)}
 }
 
 /* --- canvas ------------------------------------------------------------- */
 .planner-canvas{min-width:0}
 .toolbar{display:flex;flex-wrap:wrap;gap:var(--u-half);margin:var(--u) 0}
-#plan{width:100%;height:auto;max-height:calc(100vh - 240px);display:block;
+#plan{width:100%;height:auto;max-height:calc(100vh - 260px);display:block;
   touch-action:none;background:transparent}
 
 .grid-10,.grid-100{stroke:var(--grid);fill:none}
@@ -52,9 +56,14 @@
 .item.is-flagged .name{fill:var(--berry-ink)}
 .item.is-selected.is-flagged rect.body{stroke:var(--berry-deep);stroke-width:3}
 .item:focus{outline:none}
-.item .focus-ring{fill:none;stroke:transparent;stroke-width:6}
-.item:focus-visible .focus-ring{stroke:var(--focus-yellow)}
-.item:focus-visible rect.body{stroke:var(--focus-ink);stroke-width:3}
+/* The GOV.UK focus block, as close as SVG allows: a solid yellow field behind
+   the shape with an ink bar under it, and the shape's own outline in ink. */
+.item .focus-ring{fill:none;stroke:none}
+.item .focus-bar{fill:none}
+.item:focus-visible .focus-ring{fill:var(--focus-yellow)}
+.item:focus-visible .focus-bar{fill:var(--focus-ink)}
+.item:focus-visible rect.body{stroke:var(--focus-ink);stroke-width:3;fill:var(--focus-yellow)}
+.item:focus-visible .name,.item:focus-visible .dims{fill:var(--focus-ink)}
 
 /* --- panel -------------------------------------------------------------- */
 .planner-panel{min-width:0}
@@ -146,6 +155,7 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
   <main id="main" class="hold planner">
 
     <section class="planner-canvas" aria-label="Room plan">
+      <div class="canvas-sticky">
       <p class="kicker" id="plan-caption">Bedroom 1 &middot; 4.00 &times; 3.00 m</p>
 
       <div class="toolbar" role="toolbar" aria-label="Plan controls">
@@ -160,6 +170,7 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
       <svg id="plan" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"
            role="img" aria-labelledby="plan-caption"></svg>
       <p class="status" id="canvas-status" role="status"></p>
+      </div>
     </section>
 
     <aside class="planner-panel" aria-label="Furniture and sharing">
@@ -767,7 +778,9 @@ function renderItem(it, fs) {
       + (it.r ? ", turned " + it.r + " degrees" : "")
       + (flags.length ? ", " + flags.join(", ") : "")
   });
-  g.appendChild(el("rect", { x: it.x - 3, y: it.y - 3, width: fp.w + 6, height: fp.d + 6, class: "focus-ring", "vector-effect": "non-scaling-stroke" }));
+  const pad = Math.max(2, fs * 0.25), bar = Math.max(2, fs * 0.3);
+  g.appendChild(el("rect", { x: it.x - pad, y: it.y - pad, width: fp.w + pad * 2, height: fp.d + pad * 2, class: "focus-ring" }));
+  g.appendChild(el("rect", { x: it.x - pad, y: it.y + fp.d + pad, width: fp.w + pad * 2, height: bar, class: "focus-bar" }));
   g.appendChild(el("rect", { x: it.x, y: it.y, width: fp.w, height: fp.d, class: "body", "vector-effect": "non-scaling-stroke" }));
 
   const cx = it.x + fp.w / 2, cy = it.y + fp.d / 2;
@@ -1209,7 +1222,7 @@ function exportableSVG(scale) {
   const v = (n) => cs.getPropertyValue(n).trim();
   const clone = svg.cloneNode(true);
 
-  clone.querySelectorAll(".focus-ring, .opening-hit").forEach(n => n.remove());
+  clone.querySelectorAll(".focus-ring, .focus-bar, .opening-hit").forEach(n => n.remove());
   clone.querySelectorAll(".is-selected").forEach(n => n.classList.remove("is-selected"));
 
   const map = [
