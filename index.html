@@ -22,6 +22,12 @@
    cut sizes, with the last L-shape's numbers left in them. */
 [hidden]{display:none !important}
 
+/* The bolted rule's dots are two ::before/::after circles from the brand
+   stylesheet; the line itself is the <hr>'s own border, untouched. Turning
+   the dots off here, rather than in excursion-web.css, keeps that file the
+   unedited copy it is meant to stay. */
+.rule--bolt::before,.rule--bolt::after{content:none}
+
 
 
 :root{--cog-mask:url('data:image/svg+xml;utf8,\
@@ -105,7 +111,6 @@ input,textarea,select{caret-color:var(--ink)}
 /* The app carries its own mark and name, the way Hum and Redpen do, rather
    than the Perkins totem: an app in the Dock or a browser tab is found by its
    icon, and a cream tile with a totem on it vanishes at that size. */
-.masthead .app-icon{display:block;border-radius:7px}
 .masthead .app-name{font-family:var(--content);font-weight:600;font-size:21px;
   line-height:1;color:var(--ink)}
 .masthead .app-what{font-family:var(--wayfind);font-weight:500;font-size:13px;
@@ -429,7 +434,6 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
 .btn-small,.btn-icon,.segmented,.switch-track,.settings-body,
 .rows li .row-main,.rows li .btn-small,
 details.place > summary,details.presets summary,.settings > summary,
-.masthead .app-icon{border-radius:3px}
 .segmented button:first-child{border-radius:3px 0 0 3px}
 .segmented button:last-child{border-radius:0 3px 3px 0}
 </style>
@@ -443,7 +447,7 @@ details.place > summary,details.presets summary,.settings > summary,
 
   <header class="app-header">
     <a class="masthead" href="./" aria-label="Chalk, a room planner">
-      <img class="app-icon" src="icon.svg" alt="" width="34" height="34">
+      <span class="plate">Perkins</span>
       <span class="app-name">Chalk</span>
       <span class="app-what">Room planner</span>
     </a>

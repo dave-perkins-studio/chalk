@@ -247,3 +247,16 @@ is a different promise, so it takes the platform's own mark for that, drawn in
 the line-work everything else uses. The picker names the drawing below it, so
 that is where it belongs, not bolted to the masthead. The heading stays in the
 outline, visually hidden, carrying the whole caption.
+
+### Corrected, 8 September 2026 (2)
+
+David asked for the Perkins totem back in place of Chalk's own icon. The
+masthead now carries the brand's plate and pill, verbatim from
+`excursion-web.css`, with "Chalk" and "Room planner" beside it as before. The
+Chalk mark drawn for deviation 7 stays as the favicon only, where a browser
+tab needs an icon distinct from every other tab and the totem itself would
+vanish at that size, which was the whole reason it was drawn.
+
+He also asked for the bolted rule's dots gone, keeping the line. Done as an
+override in this page's own `<style>` rather than in `excursion-web.css`,
+which stays the unedited copy it is meant to be.
