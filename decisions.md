@@ -111,3 +111,20 @@ round-trips including the cut, the PNG exports, overlapping openings are
 flagged in words, no console errors, and nothing overflows at 375px.
 
 Merged to master and published, as authorised.
+
+## 2026-09-08 — Renamed to Chalk, and the old address kept alive
+
+The repo and the folder are now `chalk`, and the tool is served at
+<https://dave-perkins-studio.github.io/chalk/>.
+
+GitHub redirects a renamed repository but **not** its Pages URL, so
+`/room-planner/` began returning 404 the moment the rename went through. A
+second public repo, `dave-perkins-studio/room-planner`, now holds nothing but a
+forwarding page so any link sent out before the rename still works.
+`index.html` and `404.html` there are the same file, so deep links forward too,
+and the script carries any query or fragment across.
+
+That repo is a signpost with no working copy under `~/Code`: it has one page,
+nothing to maintain, and keeping a folder named after the old name next to the
+new one would only confuse the workspace. Clone it if it ever needs editing,
+or delete it once the old link stops mattering.
