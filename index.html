@@ -15,20 +15,60 @@
    in the same grammar: square, hairline ring, weighted bottom edge, GOV.UK
    focus copied verbatim from section 21. */
 
-.planner{padding-top:var(--u2);padding-bottom:var(--u4)}
+/* A class that sets display beats the UA's [hidden]{display:none}, so every
+   .field-row toggled with .hidden stayed on screen: choosing Window still
+   showed the door's swing and hinge, and a rectangular room still showed the
+   cut sizes, with the last L-shape's numbers left in them. */
+[hidden]{display:none !important}
+
+/* --- app shell ----------------------------------------------------------
+   Excursion's .hold column is a document measure — a reading width for prose.
+   This is a canvas tool, so the app runs the full width between the two frame
+   lines instead, and the frame, gutters and paper are untouched. The
+   deviation, and every other one, is written up in brand.md.
+   ------------------------------------------------------------------------- */
+:root{--panel-w:340px}
+@media (min-width:1180px){:root{--panel-w:380px}}
+
+.app{display:flex;flex-direction:column;min-height:100vh}
+.app-header{display:flex;align-items:center;justify-content:space-between;
+  gap:var(--u2);flex-wrap:wrap;padding:var(--u) 0}
+.app-body{padding-top:var(--u);padding-bottom:var(--u2)}
+
 @media (min-width:900px){
-  .planner{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--u2)}
-  /* The panel is a long scroll, so the plan stays put while you work down it.
-     The column has to stretch to the row's height for the sticky child to have
-     anywhere to travel, which is why the wrapper exists at all. */
-  .canvas-sticky{position:sticky;top:var(--u)}
+  /* No page-level scroll on a desktop: the shell is exactly the viewport, the
+     plan takes the height it is given, and the panel scrolls inside its own
+     column. This replaces the position:sticky canvas, which needed the page to
+     scroll in order to work at all. */
+  html,body{height:100%;overflow:hidden}
+  .app{height:100%;min-height:0}
+  /* A unit of air at the foot so the status line does not sit on the very edge
+     of the viewport, and the panel's scroll box stops clear of it too. */
+  .app-body{flex:1 1 auto;min-height:0;padding-bottom:var(--u);
+    display:grid;grid-template-columns:minmax(0,1fr) var(--panel-w);gap:var(--u2)}
+  .planner-canvas{min-height:0;display:flex;flex-direction:column}
+  .planner-panel{min-height:0;overflow-y:auto;overscroll-behavior:contain;
+    border-left:1px solid var(--rule);padding-left:var(--u2);
+    padding-bottom:var(--u4)}
 }
 
 /* --- canvas ------------------------------------------------------------- */
 .planner-canvas{min-width:0}
 .toolbar{display:flex;flex-wrap:wrap;gap:var(--u-half);margin:var(--u) 0}
+.canvas-stage{position:relative;min-height:0}
 #plan{width:100%;height:auto;max-height:calc(100vh - 260px);display:block;
   touch-action:none;background:transparent}
+@media (min-width:900px){
+  .canvas-stage{flex:1 1 auto}
+  /* Absolute inside the stage so the SVG takes the height the flex row hands
+     it rather than dictating it; preserveAspectRatio does the letterboxing. */
+  #plan{position:absolute;inset:0;width:100%;height:100%;max-height:none}
+}
+
+/* The first thing a family member sees on a shared, empty plan. */
+.empty-note{font-family:var(--reading);font-size:15px;line-height:1.5;
+  color:var(--ink-muted);margin:var(--u-half) 0 0;max-width:52ch;
+  border-left:3px solid var(--taupe);padding-left:var(--u-half)}
 
 .grid-10,.grid-100{stroke:var(--grid);fill:none}
 .grid-100{stroke:var(--rule-faint)}
@@ -45,6 +85,10 @@
 .opening-hit{fill:transparent;stroke:transparent;stroke-width:14;cursor:pointer}
 .opening.is-off-wall .opening-window,.opening.is-off-wall .opening-leaf{stroke:var(--berry)}
 .opening.is-off-wall .opening-arc{stroke:var(--berry)}
+/* Sibling of .is-off-wall, same grammar: two openings sharing a stretch of
+   wall is the same class of mistake as one running off the end of it. */
+.opening.is-clashing .opening-window,.opening.is-clashing .opening-leaf{stroke:var(--berry)}
+.opening.is-clashing .opening-arc{stroke:var(--berry)}
 
 .item rect.body{fill:var(--paper-tint);stroke:var(--ink);stroke-width:1}
 .item text{pointer-events:none}
@@ -67,67 +111,6 @@
 .item:focus-visible rect.body{stroke:var(--focus-ink);stroke-width:3;fill:var(--focus-yellow)}
 .item:focus-visible .name,.item:focus-visible .dims{fill:var(--focus-ink)}
 
-
-/* --- rooms ---------------------------------------------------------------- */
-
-function uniqueRoomName(name) {
-  let base = (name || "Room").trim() || "Room", n = base, i = 2;
-  const taken = new Set(model.rooms.map(r => r.name.toLowerCase()));
-  while (taken.has(n.toLowerCase())) n = base + " " + i++;
-  return n;
-}
-
-function switchRoom(id) {
-  if (!model.rooms.some(r => r.id === id)) return;
-  model.currentRoom = id;
-  selectedId = null; selectedOpening = -1;
-  renderAll(); save();
-  say("canvas-status", "");
-}
-
-function newRoom() {
-  pushUndo();
-  const r = { id: newId(), name: uniqueRoomName("Room"), width: 400, depth: 300, cut: null, openings: [], items: [] };
-  model.rooms.push(r);
-  model.currentRoom = r.id;
-  selectedId = null; selectedOpening = -1;
-  renderAll(); save();
-  $("room-name").focus();
-  $("room-name").select();
-  say("canvas-status", r.name + " added. Give it a name and a size.");
-}
-
-function deleteRoom() {
-  if (model.rooms.length < 2) {
-    say("canvas-status", "This is the only room. Add another before deleting this one.", true);
-    return;
-  }
-  const r = room();
-  if (!confirm("Delete '" + r.name + "' and everything in it?")) return;
-  pushUndo();
-  model.rooms = model.rooms.filter(x => x.id !== r.id);
-  model.currentRoom = model.rooms[0].id;
-  selectedId = null; selectedOpening = -1;
-  renderAll(); save();
-  // Deleting down to the last room disables the button focus was sitting on,
-  // which would drop it to the body, so hand focus to the switcher instead.
-  ($("room-delete").disabled ? $("room-pick") : $("room-delete")).focus();
-  say("canvas-status", r.name + " deleted. Cmd + Z puts it back.");
-}
-
-function renderRoomSwitcher() {
-  const sel = $("room-pick");
-  sel.textContent = "";
-  model.rooms.forEach(r => {
-    const o = document.createElement("option");
-    o.value = r.id;
-    o.textContent = r.name + " · " + metres(r.width) + " × " + metres(r.depth);
-    sel.appendChild(o);
-  });
-  sel.value = model.currentRoom;
-  $("room-delete").disabled = model.rooms.length < 2;
-  if (document.activeElement !== $("house-name")) $("house-name").value = model.title || "";
-}
 
 /* --- panel -------------------------------------------------------------- */
 .planner-panel{min-width:0}
@@ -171,8 +154,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{
   border-bottom-color:var(--edge-deep)}
 
 .rows{list-style:none;margin:0;padding:0;border-top:1px dashed var(--rule-faint)}
-.rows li{border-bottom:1px dashed var(--rule-faint);display:flex;align-items:center;
-  gap:var(--u-half);padding:10px 0;transition:background-color var(--box-fade) ease-out}
+/* A row is a block now, not a flex line: a selected furniture row grows its own
+   editor underneath the head rather than sending you to a separate section. */
+.rows li{border-bottom:1px dashed var(--rule-faint);
+  transition:background-color var(--box-fade) ease-out}
+.row-head{display:flex;align-items:center;gap:var(--u-half);padding:10px 0}
 .rows li.is-selected{background:var(--paper-tint);box-shadow:inset 0 -3px 0 var(--blue)}
 .row-main{flex:1 1 auto;min-width:0;text-align:left;background:none;border:0;padding:2px 4px;
   cursor:pointer;font:inherit;color:inherit}
@@ -182,6 +168,40 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{
 .row-flag{color:var(--berry-ink);text-transform:none;letter-spacing:0;font-size:13px}
 .empty{font-family:var(--reading);font-size:15px;color:var(--ink-muted);
   padding:10px 0;margin:0}
+
+/* The selected item's fields, living inside its own row. */
+.row-editor{padding:0 0 var(--u) 0}
+.row-editor .field{margin-bottom:var(--u-half)}
+.row-editor .sub-label{margin:0 0 var(--u-half)}
+
+/* --- the two collapsed places -------------------------------------------
+   Room setup is done once per room and Share once at the end, so both start
+   closed, on GOV.UK's accordion rule rather than for tidiness. Native
+   <details>: no script, no dependency, and it opens on find-in-page. */
+details.place{border-top:1px solid var(--rule)}
+details.place + details.place{border-top:1px dashed var(--rule-faint)}
+details.place > summary{display:flex;align-items:center;justify-content:space-between;
+  gap:var(--u-half);min-height:52px;padding:var(--u-half) 2px;cursor:pointer;
+  list-style:none}
+details.place > summary::-webkit-details-marker{display:none}
+/* A drawn square plus/minus, not a chevron glyph: the brand has no chevrons
+   outside the drawn, decorative one on a stream row. */
+details.place > summary::after{content:"";flex:0 0 auto;width:14px;height:14px;
+  background-image:linear-gradient(var(--blue),var(--blue)),
+                   linear-gradient(var(--blue),var(--blue));
+  background-size:14px 2px,2px 14px;background-position:center,center;
+  background-repeat:no-repeat}
+details.place[open] > summary::after{background-size:14px 2px,0 0}
+details.place > summary:focus-visible{outline:3px solid transparent;
+  color:var(--focus-ink);background-color:var(--focus-yellow);
+  box-shadow:0 3px 0 var(--focus-ink)}
+details.place > summary:focus-visible .kicker{color:var(--focus-ink)}
+details.place > summary:focus-visible::after{
+  background-image:linear-gradient(var(--focus-ink),var(--focus-ink)),
+                   linear-gradient(var(--focus-ink),var(--focus-ink))}
+details.place > summary:hover:not(:focus-visible){background:var(--paper-tint)}
+details.place > summary .kicker{margin:0}
+.place-body{padding:var(--u-half) 0 var(--u2)}
 
 details.presets{border-top:1px dashed var(--rule-faint);padding-top:var(--u-half)}
 details.presets summary{font-family:var(--wayfind);font-weight:500;font-size:14px;
@@ -214,8 +234,14 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
      shrinks, so the select has to start at zero to share the row. */
   .room-switch select{flex:1 1 0;min-width:0}
 }
-.footer-note{display:flex;gap:var(--u);align-items:center;justify-content:center;
+/* The old page footer, relocated to the foot of the panel's own scroll, since
+   the page itself no longer scrolls. */
+.panel-foot{border-top:1px dashed var(--rule-faint);padding-top:var(--u);
+  margin-top:var(--u2);display:flex;gap:var(--u);align-items:center;
   flex-wrap:wrap}
+.panel-foot .ticket p{margin:0}
+.add-block{border-top:1px solid var(--rule);margin-top:var(--u);padding-top:var(--u)}
+.field-row .btn-small{flex:0 0 auto;align-self:flex-end;margin-bottom:var(--u-half)}
 
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:0.01ms !important;animation-duration:0.01ms !important}
@@ -227,9 +253,9 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
 <a class="skip" href="#main">Skip to content</a>
 <div class="frame" aria-hidden="true"></div>
 
-<div class="page">
+<div class="page app">
 
-  <header class="hold site-header">
+  <header class="app-header">
     <a class="masthead" href="./" aria-label="Perkins Room planner">
       <span class="plate">Perkins</span>
       <span class="co">Room planner</span>
@@ -243,13 +269,15 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
 
   <hr class="rule rule--bolt">
 
-  <main id="main" class="hold planner">
+  <main id="main" class="app-body">
 
     <h1 class="vh">Room planner</h1>
 
     <section class="planner-canvas" aria-label="Room plan">
-      <div class="canvas-sticky">
       <h2 class="kicker" id="plan-caption">Bedroom 1 &middot; 4.00 &times; 3.00 m</h2>
+      <p class="empty-note" id="empty-note" hidden>Nothing in this room yet. Add a
+        piece of furniture from the list, or open Common sizes for the usual ones,
+        then drag it around the plan.</p>
 
       <div class="toolbar" role="toolbar" aria-label="Plan controls">
         <button type="button" class="btn-small" id="btn-grid" aria-pressed="true">Grid</button>
@@ -260,46 +288,70 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
         <button type="button" class="btn-small ghost" id="btn-undo">Undo</button>
       </div>
 
-      <svg id="plan" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"
-           role="img" aria-label="Room plan"></svg>
-      <p class="status" id="canvas-status" role="status"></p>
+      <div class="canvas-stage">
+        <svg id="plan" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"
+             role="img" aria-label="Room plan"></svg>
       </div>
+      <p class="status" id="canvas-status" role="status"></p>
     </section>
 
-    <aside class="planner-panel" aria-label="Furniture and sharing">
+    <aside class="planner-panel" aria-label="Plan controls">
 
-      <section class="panel-section" aria-labelledby="k-room">
-        <h2 class="kicker" id="k-room">Room</h2>
-        <label class="field"><span>Name</span>
-          <input type="text" id="room-name" autocomplete="off"></label>
-        <div class="field-row">
-          <label class="field"><span>Width, cm</span>
-            <input type="number" id="room-width" min="50" max="3000" step="1"></label>
-          <label class="field"><span>Depth, cm</span>
-            <input type="number" id="room-depth" min="50" max="3000" step="1"></label>
-        </div>
-        <p class="sub-label">Cut a corner</p>
-        <label class="field"><span>Corner</span>
-          <select id="cut-corner">
-            <option value="">None, it's a rectangle</option>
-            <option value="NW">Top left</option>
-            <option value="NE">Top right</option>
-            <option value="SE">Bottom right</option>
-            <option value="SW">Bottom left</option>
-          </select></label>
-        <div class="field-row" id="cut-size" hidden>
-          <label class="field"><span>Across, cm</span>
-            <input type="number" id="cut-w" min="1" step="1"></label>
-          <label class="field"><span>Down, cm</span>
-            <input type="number" id="cut-d" min="1" step="1"></label>
+      <section class="panel-section" aria-labelledby="k-furniture">
+        <h2 class="kicker" id="k-furniture">Furniture</h2>
+        <ul class="rows" id="item-rows"></ul>
+
+        <!-- The selected item's fields. Kept here in the markup so every id
+             survives, and moved into the selected row by renderItemRows. -->
+        <div id="selected-section" class="row-editor" role="group"
+             aria-label="Selected item" hidden>
+          <label class="field"><span>Name</span>
+            <input type="text" id="sel-name" autocomplete="off"></label>
+          <div class="field-row">
+            <label class="field"><span>Width, cm</span>
+              <input type="number" id="sel-w" min="1" step="1"></label>
+            <label class="field"><span>Depth, cm</span>
+              <input type="number" id="sel-d" min="1" step="1"></label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>X, cm</span>
+              <input type="number" id="sel-x" step="1"></label>
+            <label class="field"><span>Y, cm</span>
+              <input type="number" id="sel-y" step="1"></label>
+            <label class="field"><span>Turn</span>
+              <select id="sel-r">
+                <option value="0">0&deg;</option><option value="90">90&deg;</option>
+                <option value="180">180&deg;</option><option value="270">270&deg;</option>
+              </select></label>
+          </div>
+          <label class="field"><span>Notes</span>
+            <input type="text" id="sel-notes" autocomplete="off"></label>
         </div>
 
-        <button type="button" class="btn-small ghost" id="room-delete">Delete this room</button>
+        <div class="add-block">
+          <p class="sub-label">Add a piece</p>
+          <label class="field"><span>Name</span>
+            <input type="text" id="add-name" autocomplete="off"></label>
+          <div class="field-row">
+            <label class="field"><span>Width, cm</span>
+              <input type="number" id="add-w" min="1" step="1"></label>
+            <label class="field"><span>Depth, cm</span>
+              <input type="number" id="add-d" min="1" step="1"></label>
+            <button type="button" class="btn-small" id="add-item">Add</button>
+          </div>
+
+          <details class="presets" id="presets">
+            <summary>Common sizes</summary>
+            <ul class="rows" id="preset-rows"></ul>
+          </details>
+        </div>
       </section>
 
       <section class="panel-section" aria-labelledby="k-openings">
         <h2 class="kicker" id="k-openings">Doors and windows</h2>
         <ul class="rows" id="opening-rows"></ul>
+        <details class="presets" id="add-opening">
+          <summary>Add a door or window</summary>
         <div class="field-row">
           <label class="field"><span>Type</span>
             <select id="op-kind"><option value="door">Door</option><option value="window">Window</option></select></label>
@@ -322,96 +374,77 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
             <select id="op-hinge"><option value="left">Left</option><option value="right">Right</option></select></label>
         </div>
         <button type="button" class="btn-small" id="op-add">Add opening</button>
-      </section>
-
-      <section class="panel-section" aria-labelledby="k-furniture">
-        <h2 class="kicker" id="k-furniture">Furniture</h2>
-        <ul class="rows" id="item-rows"></ul>
-      </section>
-
-      <section class="panel-section" aria-labelledby="k-selected" id="selected-section" hidden>
-        <h2 class="kicker" id="k-selected">Selected item</h2>
-        <label class="field"><span>Name</span>
-          <input type="text" id="sel-name" autocomplete="off"></label>
-        <div class="field-row">
-          <label class="field"><span>Width, cm</span>
-            <input type="number" id="sel-w" min="1" step="1"></label>
-          <label class="field"><span>Depth, cm</span>
-            <input type="number" id="sel-d" min="1" step="1"></label>
-        </div>
-        <div class="field-row">
-          <label class="field"><span>X, cm</span>
-            <input type="number" id="sel-x" step="1"></label>
-          <label class="field"><span>Y, cm</span>
-            <input type="number" id="sel-y" step="1"></label>
-          <label class="field"><span>Turn</span>
-            <select id="sel-r">
-              <option value="0">0&deg;</option><option value="90">90&deg;</option>
-              <option value="180">180&deg;</option><option value="270">270&deg;</option>
-            </select></label>
-        </div>
-        <label class="field"><span>Notes</span>
-          <input type="text" id="sel-notes" autocomplete="off"></label>
-      </section>
-
-      <section class="panel-section" aria-labelledby="k-add">
-        <h2 class="kicker" id="k-add">Add furniture</h2>
-        <label class="field"><span>Name</span>
-          <input type="text" id="add-name" autocomplete="off"></label>
-        <div class="field-row">
-          <label class="field"><span>Width, cm</span>
-            <input type="number" id="add-w" min="1" step="1"></label>
-          <label class="field"><span>Depth, cm</span>
-            <input type="number" id="add-d" min="1" step="1"></label>
-        </div>
-        <button type="button" class="btn-small" id="add-item">Add to list</button>
-
-        <details class="presets" id="presets">
-          <summary>Common sizes</summary>
-          <ul class="rows" id="preset-rows"></ul>
         </details>
       </section>
 
-      <section class="panel-section" aria-labelledby="k-share">
-        <h2 class="kicker" id="k-share">Share</h2>
-        <p class="sub-label">This room</p>
-        <div class="share-buttons">
-          <button type="button" class="btn-small" id="copy-md">Copy text</button>
-          <button type="button" class="btn-small ghost" id="download-md">Download .md</button>
-          <button type="button" class="btn-small" id="copy-png">Copy image</button>
-          <button type="button" class="btn-small ghost" id="download-png">Download PNG</button>
-        </div>
+      <details class="place" id="place-room">
+        <summary><h2 class="kicker">Room setup</h2></summary>
+        <div class="place-body">
+          <label class="field"><span>Name</span>
+            <input type="text" id="room-name" autocomplete="off"></label>
+          <div class="field-row">
+            <label class="field"><span>Width, cm</span>
+              <input type="number" id="room-width" min="50" max="3000" step="1"></label>
+            <label class="field"><span>Depth, cm</span>
+              <input type="number" id="room-depth" min="50" max="3000" step="1"></label>
+          </div>
+          <p class="sub-label">Cut a corner</p>
+          <label class="field"><span>Corner</span>
+            <select id="cut-corner">
+              <option value="">None, it's a rectangle</option>
+              <option value="NW">Top left</option>
+              <option value="NE">Top right</option>
+              <option value="SE">Bottom right</option>
+              <option value="SW">Bottom left</option>
+            </select></label>
+          <div class="field-row" id="cut-size" hidden>
+            <label class="field"><span>Across, cm</span>
+              <input type="number" id="cut-w" min="1" step="1"></label>
+            <label class="field"><span>Down, cm</span>
+              <input type="number" id="cut-d" min="1" step="1"></label>
+          </div>
 
-        <p class="sub-label">Every room</p>
-        <label class="field"><span>House name</span>
-          <input type="text" id="house-name" autocomplete="off"></label>
-        <div class="share-buttons">
-          <button type="button" class="btn-small" id="copy-all">Copy all rooms</button>
-          <button type="button" class="btn-small ghost" id="download-all">Download all rooms</button>
+          <button type="button" class="btn-small ghost" id="room-delete">Delete this room</button>
         </div>
-        <p class="hint">Paste a plan someone has sent you, or press Cmd&nbsp;+&nbsp;V anywhere on this page.</p>
-        <label class="field"><span>Paste a plan</span>
-          <textarea id="paste-box" spellcheck="false"></textarea></label>
-        <button type="button" class="btn-small" id="load-md">Load plan</button>
-        <p class="status" id="share-status" role="status"></p>
-      </section>
+      </details>
+
+      <details class="place" id="place-share">
+        <summary><h2 class="kicker">Share</h2></summary>
+        <div class="place-body">
+          <p class="sub-label">This room</p>
+          <div class="share-buttons">
+            <button type="button" class="btn-small" id="copy-md">Copy text</button>
+            <button type="button" class="btn-small ghost" id="download-md">Download .md</button>
+            <button type="button" class="btn-small" id="copy-png">Copy image</button>
+            <button type="button" class="btn-small ghost" id="download-png">Download PNG</button>
+          </div>
+
+          <p class="sub-label">Every room</p>
+          <label class="field"><span>House name</span>
+            <input type="text" id="house-name" autocomplete="off"></label>
+          <div class="share-buttons">
+            <button type="button" class="btn-small" id="copy-all">Copy all rooms</button>
+            <button type="button" class="btn-small ghost" id="download-all">Download all rooms</button>
+          </div>
+          <p class="hint">Paste a plan someone has sent you, or press Cmd&nbsp;+&nbsp;V anywhere on this page.</p>
+          <label class="field"><span>Paste a plan</span>
+            <textarea id="paste-box" spellcheck="false"></textarea></label>
+          <button type="button" class="btn-small" id="load-md">Load plan</button>
+          <p class="status" id="share-status" role="status"></p>
+        </div>
+      </details>
+
+      <div class="panel-foot">
+        <div class="ticket">
+          <p>Sizes in cm &middot; saved in this browser only</p>
+        </div>
+        <button type="button" class="btn-small ghost" id="clear-data">Clear saved plan</button>
+      </div>
 
     </aside>
   </main>
 
-  <hr class="rule">
-
-  <footer class="hold site-footer">
-    <div class="ticket">
-      <p>Room planner &middot; sizes in cm &middot; saved in this browser only</p>
-    </div>
-    <p class="footer-note">
-      <button type="button" class="btn-small ghost" id="clear-data">Clear saved plan</button>
-    </p>
-  </footer>
-
 </div>
-
 <script>
 "use strict";
 /* ===========================================================================
@@ -521,6 +554,22 @@ function openingOffWall(op, r) {
   return op.offset < s.lo - 0.5 || op.offset + op.width > s.hi + 0.5;
 }
 
+/* Openings sharing a stretch of the same wall. Two doors in the same 80 cm of
+   plaster is the same class of mistake as one running off the end of the wall,
+   and gets the same flag, in words and in the same berry dash. */
+function openingClashes(i, r) {
+  const op = r.openings[i];
+  if (!op) return [];
+  return r.openings.filter((o, j) => j !== i && o.wall === op.wall
+    && op.offset < o.offset + o.width && o.offset < op.offset + op.width);
+}
+
+function openingClashText(clash) {
+  if (!clash.length) return "";
+  if (clash.length === 1) return "overlaps the " + clash[0].kind + " on the same wall";
+  return "overlaps " + clash.length + " other openings on the same wall";
+}
+
 /* A box is in the room when it sits inside the bounding rectangle and clear of
    the removed corner. */
 function boxOutsideRoom(box, r) {
@@ -626,6 +675,17 @@ function say(id, text, warn) {
   const el = $(id);
   el.textContent = text || "";
   el.classList.toggle("is-warn", !!warn);
+  if (text) reveal(el);
+}
+
+/* Room setup and Share are collapsed by default, so a message printed inside
+   one, or a field about to take focus, has to open its place first. */
+function reveal(node) {
+  let d = node && node.closest ? node.closest("details") : null;
+  while (d) {
+    d.open = true;
+    d = d.parentElement && d.parentElement.closest ? d.parentElement.closest("details") : null;
+  }
 }
 
 /* --- markdown ------------------------------------------------------------
@@ -889,20 +949,47 @@ function restoreItemFocus(id) {
   if (next) next.focus();
 }
 
+/* The selected item's fields now live inside its own row, so a rebuild of the
+   list can tear a field out from under the cursor. Remember which field it was
+   and where the caret sat, and put both back. */
+function caretOf(field) {
+  try { return [field.selectionStart, field.selectionEnd]; } catch (e) { return null; }
+}
+function setCaret(field, at) {
+  if (!at) return;
+  try { field.setSelectionRange(at[0], at[1]); } catch (e) {}
+}
+
 function focusedRow(ul) {
   const a = document.activeElement;
   const li = a && a.closest ? a.closest("li") : null;
   if (!li || li.parentElement !== ul) return null;
+  if (a.closest("#selected-section")) return { editor: a.id, caret: caretOf(a) };
   return { index: [...ul.children].indexOf(li), main: a.classList.contains("row-main") };
+}
+
+/* In the DOM is not the same as on screen. Deleting the selected item hides
+   the editor, and focusing a hidden field leaves no ring anywhere on the page,
+   which is worse than landing on the body: the browser still believes
+   something is focused. A real mouse click hides this, because the pointer
+   moves focus to the button first; switch access and voice control do not. */
+function onScreen(node) {
+  return !!(node && document.body.contains(node)
+    && !node.closest("[hidden]") && node.getClientRects().length);
 }
 
 function restoreRowFocus(ul, at) {
   if (!at) return;
+  if (at.editor) {
+    const f = $(at.editor);
+    if (onScreen(f)) { f.focus(); setCaret(f, at.caret); return; }
+    at = { index: 0, main: true };   // the item went; fall through to the list
+  }
   const rows = [...ul.children].filter(li => li.querySelector("button"));
   if (!rows.length) return;
   const li = rows[Math.min(at.index, rows.length - 1)];
-  const btn = li.querySelector(at.main ? ".row-main" : "button") || li.querySelector("button");
-  if (btn) btn.focus();
+  const btn = li.querySelector(at.main ? ".row-main" : ".btn-small") || li.querySelector("button");
+  if (onScreen(btn)) btn.focus();
 }
 
 
@@ -982,7 +1069,10 @@ function renderDimensions(r, fs) {
 
 function renderOpening(op, i, r) {
   const l = openingLine(op, r);
-  const g = el("g", { class: "opening" + (openingOffWall(op, r) ? " is-off-wall" : ""), "data-op": i });
+  const g = el("g", {
+    class: "opening" + (openingOffWall(op, r) ? " is-off-wall" : "")
+      + (openingClashes(i, r).length ? " is-clashing" : ""), "data-op": i
+  });
 
   // Knock the wall out under the opening, then draw the opening itself.
   g.appendChild(el("line", { x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, class: "opening-gap", "vector-effect": "non-scaling-stroke" }));
@@ -1251,6 +1341,7 @@ function newRoom() {
   model.currentRoom = r.id;
   selectedId = null; selectedOpening = -1;
   renderAll(); save();
+  reveal($("room-name"));
   $("room-name").focus();
   $("room-name").select();
   say("canvas-status", r.name + " added. Give it a name and a size.");
@@ -1270,7 +1361,8 @@ function deleteRoom() {
   renderAll(); save();
   // Deleting down to the last room disables the button focus was sitting on,
   // which would drop it to the body, so hand focus to the switcher instead.
-  ($("room-delete").disabled ? $("room-pick") : $("room-delete")).focus();
+  const back = $("room-delete").disabled ? $("room-pick") : $("room-delete");
+  reveal(back); back.focus();
   say("canvas-status", r.name + " deleted. Cmd + Z puts it back.");
 }
 
@@ -1280,7 +1372,9 @@ function renderRoomSwitcher() {
   model.rooms.forEach(r => {
     const o = document.createElement("option");
     o.value = r.id;
-    o.textContent = r.name + " · " + metres(r.width) + " × " + metres(r.depth);
+    // Name only. The size is in the plan caption immediately below, and the
+    // longer string clipped mid-character in the header's narrow flex row.
+    o.textContent = r.name;
     sel.appendChild(o);
   });
   sel.value = model.currentRoom;
@@ -1290,43 +1384,81 @@ function renderRoomSwitcher() {
 
 /* --- panel ---------------------------------------------------------------- */
 
+/* The furniture list and the selected item's fields are one thing now: a row
+   grows its own editor when you select it, instead of sending you to a
+   separate section four headings further down.
+   That makes rebuilding the list expensive — a rebuild destroys the field the
+   cursor is in — so the list is only rebuilt when its shape changes (which
+   items exist, in what order, and which one is selected). Typing a new X into
+   the selected item takes the cheap path: the same nodes, new text. */
+let itemRowsKey = null;
+
+function itemRowsShape(r) {
+  return r.id + "|" + r.items.map(i => i.id).join(",") + "|" + (selectedId || "");
+}
+
+function itemMetaText(it) {
+  return it.w + " × " + it.d + " cm" + (it.r ? " · turned " + it.r + "°" : "")
+    + (it.placed ? "" : " · not placed");
+}
+
+function toggleLabel(it) {
+  return (it.placed ? "Take " : "Place ") + it.name + (it.placed ? " off the plan" : " on the plan");
+}
+
 function renderItemRows() {
   const r = room(), ul = $("item-rows");
+  $("empty-note").hidden = r.items.length > 0;
+
+  const shape = itemRowsShape(r);
+  if (shape === itemRowsKey && ul.children.length) { refreshItemRows(r, ul); return; }
+  itemRowsKey = shape;
+
   const at = focusedRow(ul);
+  // The editor is a permanent node with permanent ids, parked outside the list
+  // while the list is torn down, then moved into the selected row.
+  const editor = $("selected-section");
+  if (editor.parentElement && editor.parentElement.closest("#item-rows")) {
+    ul.parentElement.appendChild(editor);
+  }
   ul.textContent = "";
+
   if (!r.items.length) {
     const li = document.createElement("li");
     const p = document.createElement("p");
     p.className = "empty";
-    p.textContent = "Nothing on the list yet. Add an item below, or open Common sizes.";
+    p.textContent = "Nothing on the list yet.";
     li.appendChild(p);
     ul.appendChild(li);
     return;
   }
+
   r.items.forEach(it => {
     const li = document.createElement("li");
+    li.dataset.id = it.id;
     if (it.id === selectedId) li.className = "is-selected";
     const flags = flagsFor(it);
+
+    const head = document.createElement("div");
+    head.className = "row-head";
 
     const b = document.createElement("button");
     b.type = "button"; b.className = "row-main";
     const n = document.createElement("span"); n.className = "row-name"; n.textContent = it.name;
     const m = document.createElement("span"); m.className = "row-meta";
-    m.textContent = it.w + " × " + it.d + " cm" + (it.r ? " · turned " + it.r + "°" : "")
-      + (it.placed ? "" : " · not placed");
+    m.textContent = itemMetaText(it);
     b.appendChild(n); b.appendChild(m);
-    if (flags.length) {
-      const f = document.createElement("span");
-      f.className = "row-meta row-flag"; f.textContent = flags.join(" · ");
-      b.appendChild(f);
-    }
+    const f = document.createElement("span");
+    f.className = "row-meta row-flag";
+    f.textContent = flags.join(" · ");
+    f.hidden = !flags.length;
+    b.appendChild(f);
     b.addEventListener("click", () => select(it.id, true));
 
     const t = document.createElement("button");
-    t.type = "button"; t.className = "btn-small ghost";
+    t.type = "button"; t.className = "btn-small ghost row-toggle";
     t.textContent = it.placed ? "Remove" : "Place";
-    t.setAttribute("aria-label", (it.placed ? "Take " : "Place ") + it.name
-      + (it.placed ? " off the plan" : " on the plan"));
+    t.setAttribute("aria-label", toggleLabel(it));
     t.addEventListener("click", () => {
       pushUndo();
       if (it.placed) { it.placed = false; it.x = null; it.y = null; }
@@ -1335,10 +1467,29 @@ function renderItemRows() {
       renderAll(); save(); announceSelection();
     });
 
-    li.appendChild(b); li.appendChild(t);
+    head.appendChild(b); head.appendChild(t);
+    li.appendChild(head);
+    if (it.id === selectedId) li.appendChild(editor);
     ul.appendChild(li);
   });
   restoreRowFocus(ul, at);
+}
+
+/* Same nodes, new words. Nothing the keyboard is sitting in gets replaced. */
+function refreshItemRows(r, ul) {
+  r.items.forEach(it => {
+    const li = ul.querySelector('li[data-id="' + it.id + '"]');
+    if (!li) return;
+    const flags = flagsFor(it);
+    li.querySelector(".row-name").textContent = it.name;
+    li.querySelector(".row-meta:not(.row-flag)").textContent = itemMetaText(it);
+    const f = li.querySelector(".row-flag");
+    f.textContent = flags.join(" · ");
+    f.hidden = !flags.length;
+    const t = li.querySelector(".row-toggle");
+    t.textContent = it.placed ? "Remove" : "Place";
+    t.setAttribute("aria-label", toggleLabel(it));
+  });
 }
 
 function renderOpeningRows() {
@@ -1363,6 +1514,13 @@ function renderOpeningRows() {
       f.textContent = "past the end of that wall · it runs " + s2.lo + " to " + s2.hi + " cm";
       b.appendChild(f);
     }
+    const clash = openingClashes(i, r);
+    if (clash.length) {
+      const f = document.createElement("span");
+      f.className = "row-meta row-flag";
+      f.textContent = openingClashText(clash);
+      b.appendChild(f);
+    }
     b.addEventListener("click", () => selectOpening(i));
 
     const del = document.createElement("button");
@@ -1376,9 +1534,20 @@ function renderOpeningRows() {
       renderAll(); save();
     });
 
-    li.appendChild(b); li.appendChild(del);
+    const head = document.createElement("div");
+    head.className = "row-head";
+    head.appendChild(b); head.appendChild(del);
+    li.appendChild(head);
     ul.appendChild(li);
   });
+  if (!r.openings.length) {
+    const li = document.createElement("li");
+    const p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "No doors or windows yet.";
+    li.appendChild(p);
+    ul.appendChild(li);
+  }
   restoreRowFocus(ul, at);
 }
 
@@ -1405,7 +1574,10 @@ function renderPresetRows() {
     add.textContent = "Add";
     add.setAttribute("aria-label", "Add a " + name + " to the plan");
     add.addEventListener("click", onAdd);
-    li.appendChild(b); li.appendChild(add);
+    const head = document.createElement("div");
+    head.className = "row-head";
+    head.appendChild(b); head.appendChild(add);
+    li.appendChild(head);
     ul.appendChild(li);
   });
 }
@@ -1413,7 +1585,20 @@ function renderPresetRows() {
 function renderSelectedForm() {
   const it = selectedItem();
   const sec = $("selected-section");
-  if (!it) { sec.hidden = true; return; }
+  if (!it) {
+    // The editor is about to go. If focus is inside it, hand focus on before
+    // hiding rather than after: hiding the node the browser thinks is focused
+    // drops the ring to the body, and a switch or voice user has nothing to
+    // carry on from. The first furniture row is the nearest sensible place.
+    if (document.activeElement && document.activeElement.closest
+        && document.activeElement.closest("#selected-section")) {
+      const next = $("item-rows").querySelector(".row-main")
+        || svg.querySelector("g.item") || $("btn-undo");
+      if (next) next.focus();
+    }
+    sec.hidden = true;
+    return;
+  }
   sec.hidden = false;
   $("sel-name").value = it.name;
   $("sel-w").value = it.w;
@@ -1509,7 +1694,7 @@ function wirePanel() {
     else if (r.cut) { r.cut.corner = e.target.value; }
     else { r.cut = { corner: e.target.value, w: Math.round(r.width / 3), d: Math.round(r.depth / 3) }; }
     renderAll(); save();
-    if (r.cut) { $("cut-w").focus(); $("cut-w").select(); }
+    if (r.cut) { reveal($("cut-w")); $("cut-w").focus(); $("cut-w").select(); }
   });
   onInput("cut-w", v => { const r = room(), n = parseInt(v, 10); if (r.cut && n > 0 && n < r.width) { r.cut.w = n; renderAll(); } });
   onInput("cut-d", v => { const r = room(), n = parseInt(v, 10); if (r.cut && n > 0 && n < r.depth) { r.cut.d = n; renderAll(); } });
@@ -1585,6 +1770,9 @@ function exportableSVG(scale) {
     [".is-off-wall .opening-window", { stroke: v("--berry") }],
     [".is-off-wall .opening-leaf", { stroke: v("--berry") }],
     [".is-off-wall .opening-arc", { stroke: v("--berry") }],
+    [".is-clashing .opening-window", { stroke: v("--berry") }],
+    [".is-clashing .opening-leaf", { stroke: v("--berry") }],
+    [".is-clashing .opening-arc", { stroke: v("--berry") }],
     [".dim-line", { stroke: v("--ink-faint"), "stroke-width": "1" }],
     [".dim-text", { fill: v("--ink-muted") }],
     [".opening-window", { stroke: v("--blue"), "stroke-width": "4", fill: "none" }],

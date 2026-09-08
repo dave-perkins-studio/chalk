@@ -12,19 +12,24 @@ One HTML file, no build step, no account, nothing sent anywhere. Open
 
 ## Using it
 
-Pick a room from the switcher at the top, or add one with New room. Set its
-width and depth in the panel on the right. Width runs left to right, depth runs
-top to bottom, both in centimetres.
+Pick a room from the switcher at the top, or add one with New room. The panel
+on the right has three parts: the furniture in this room, the doors and
+windows, then Room setup and Share, which stay folded away until you need them.
 
-Add furniture either from the Common sizes list or by typing a name and a size.
-Items land on the first free patch of floor. Drag them where you want them.
+Set the room's width and depth under Room setup. Width runs left to right,
+depth runs top to bottom, both in centimetres.
 
-For an L-shaped room, cut a corner: pick which one, then give the notch its
-two lengths. That covers a chimney breast, a stair bulkhead or a room that
+Add furniture from Common sizes or by typing a name and a size. Items land on
+the first free patch of floor. Drag them where you want them. Click one and its
+row opens up so you can type an exact position, size or turn.
+
+For an L-shaped room, cut a corner under Room setup: pick which one, then give
+the notch its two lengths. That covers a chimney breast, a stair bulkhead or a room that
 wraps round one. Set the corner back to None to get the rectangle again.
 
 Doors and windows go on a named wall, measured from a corner: north and south
-from the left, east and west from the top. A door draws its swing, and anything
+from the left, east and west from the top. Two openings overlapping on the same
+wall are flagged. A door draws its swing, and anything
 sitting in the way gets flagged. Cutting a corner shortens two of the walls, so
 an opening left stranded past the end of one is flagged with the range that
 wall now covers.
