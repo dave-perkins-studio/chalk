@@ -19,6 +19,7 @@ Room: 420 × 350 cm
 ## Living room
 
 Room: 520 × 400 cm
+Cut: top-right 150 × 120 cm
 
 | Opening | Wall | From | Width | Swing | Hinge |
 |---|---|---|---|---|---|
@@ -31,6 +32,6 @@ Room: 520 × 400 cm
 | Armchair | 90 | 90 | 20 | 200 | 0 |  |
 | Coffee table | 100 | 50 | 210 | 200 | 0 |  |
 | TV unit | 150 | 40 | 185 | 0 | 0 |  |
-| Bookcase | 80 | 30 | 440 | 0 | 0 |  |
+| Bookcase | 80 | 30 | 440 | 150 | 0 |  |
 
 Room planner · sizes in cm · X and Y from the top-left corner · 8 September 2026

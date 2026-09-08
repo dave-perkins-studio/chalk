@@ -19,9 +19,15 @@ top to bottom, both in centimetres.
 Add furniture either from the Common sizes list or by typing a name and a size.
 Items land on the first free patch of floor. Drag them where you want them.
 
+For an L-shaped room, cut a corner: pick which one, then give the notch its
+two lengths. That covers a chimney breast, a stair bulkhead or a room that
+wraps round one. Set the corner back to None to get the rectangle again.
+
 Doors and windows go on a named wall, measured from a corner: north and south
 from the left, east and west from the top. A door draws its swing, and anything
-sitting in the way gets flagged.
+sitting in the way gets flagged. Cutting a corner shortens two of the walls, so
+an opening left stranded past the end of one is flagged with the range that
+wall now covers.
 
 Items turn red and dashed when they're outside the room, overlapping something
 else, or blocking a door. The reason is written out under the plan and next to
@@ -63,6 +69,7 @@ whole plan.
 # Room plan: Bedroom 1
 
 Room: 420 × 350 cm
+Cut: top-right 150 × 120 cm
 
 | Opening | Wall | From | Width | Swing | Hinge |
 |---|---|---|---|---|---|
@@ -79,6 +86,11 @@ X and Y are the distance from the top-left corner of the room to the top-left
 corner of the item, after it's been turned. Leave them empty and the item stays
 on the list without going on the plan.
 
+The Cut line is optional and only appears for an L-shaped room. It names the
+corner taken out and the size of the notch, so `Cut: top-right 150 × 120 cm`
+removes a 150 by 120 block from the top right. Compass names work too, so
+`NE` and `north-east` both load.
+
 The parser is fairly forgiving. It takes metres or centimetres, `x` or `×`, wall names
 or letters, columns in any order, extra columns it doesn't recognise, and
 tables that have lost their outer pipes. A row it can't read is skipped and
@@ -92,7 +104,9 @@ after a single confirmation that names them.
 
 ## What it doesn't do
 
-- Rooms are rectangles. No L-shapes yet.
+- Rooms are a rectangle, optionally with one corner cut out. No U or T shapes.
+- Doors and windows go on the four outer walls, not on the two short walls a
+  cut leaves behind.
 - Furniture turns in 90° steps, not freely.
 - The exported picture covers one room, and uses a system font rather than the
   page's, because web fonts don't survive the trip into an image.
@@ -103,7 +117,7 @@ after a single confirmation that names them.
 |---|---|
 | `index.html` | The whole tool |
 | `excursion-web.css` | The Excursion stylesheet, copied from `personal-site-studio`. Don't edit it here |
-| `samples/example-plan.md` | A two-room house, cleanly formatted |
+| `samples/example-plan.md` | A two-room house, one of them L-shaped |
 | `samples/mangled-plan.md` | The same plan after a chat app has had a go at it |
 
 Actual house plans don't belong in this repo. They go in `personal/life/house/`.

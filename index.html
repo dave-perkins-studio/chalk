@@ -43,6 +43,8 @@
 .opening-leaf{stroke:var(--ink-muted);stroke-width:1.5;fill:none}
 .opening-arc{stroke:var(--ink-faint);stroke-width:1;fill:none;stroke-dasharray:6 5}
 .opening-hit{fill:transparent;stroke:transparent;stroke-width:14;cursor:pointer}
+.opening.is-off-wall .opening-window,.opening.is-off-wall .opening-leaf{stroke:var(--berry)}
+.opening.is-off-wall .opening-arc{stroke:var(--berry)}
 
 .item rect.body{fill:var(--paper-tint);stroke:var(--ink);stroke-width:1}
 .item text{pointer-events:none}
@@ -85,7 +87,7 @@ function switchRoom(id) {
 
 function newRoom() {
   pushUndo();
-  const r = { id: newId(), name: uniqueRoomName("Room"), width: 400, depth: 300, openings: [], items: [] };
+  const r = { id: newId(), name: uniqueRoomName("Room"), width: 400, depth: 300, cut: null, openings: [], items: [] };
   model.rooms.push(r);
   model.currentRoom = r.id;
   selectedId = null; selectedOpening = -1;
@@ -276,6 +278,22 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
           <label class="field"><span>Depth, cm</span>
             <input type="number" id="room-depth" min="50" max="3000" step="1"></label>
         </div>
+        <p class="sub-label">Cut a corner</p>
+        <label class="field"><span>Corner</span>
+          <select id="cut-corner">
+            <option value="">None, it's a rectangle</option>
+            <option value="NW">Top left</option>
+            <option value="NE">Top right</option>
+            <option value="SE">Bottom right</option>
+            <option value="SW">Bottom left</option>
+          </select></label>
+        <div class="field-row" id="cut-size" hidden>
+          <label class="field"><span>Across, cm</span>
+            <input type="number" id="cut-w" min="1" step="1"></label>
+          <label class="field"><span>Down, cm</span>
+            <input type="number" id="cut-d" min="1" step="1"></label>
+        </div>
+
         <button type="button" class="btn-small ghost" id="room-delete">Delete this room</button>
       </section>
 
@@ -445,8 +463,70 @@ function defaultModel() {
     title: "",
     currentRoom: "room-1",
     settings: { snap: 5, grid: true },
-    rooms: [{ id: "room-1", name: "Bedroom 1", width: 400, depth: 300, openings: [], items: [] }]
+    rooms: [{ id: "room-1", name: "Bedroom 1", width: 400, depth: 300, cut: null, openings: [], items: [] }]
   };
+}
+
+
+/* --- the cut corner -------------------------------------------------------
+   An L-shaped room is a rectangle with one corner removed, which is what a
+   chimney breast or a stair bulkhead actually leaves behind. Holding it as
+   {corner, w, d} rather than a list of points keeps the room hand-editable in
+   the Markdown table and keeps every collision test a box test.
+   ------------------------------------------------------------------------- */
+
+const CORNERS = { NW: "top left", NE: "top right", SE: "bottom right", SW: "bottom left" };
+
+/* The removed rectangle, or null when the room is a plain rectangle. */
+function cutRect(r) {
+  const c = r.cut;
+  if (!c || !(c.w > 0) || !(c.d > 0)) return null;
+  const w = Math.min(c.w, r.width - 1), d = Math.min(c.d, r.depth - 1);
+  const east = c.corner === "NE" || c.corner === "SE";
+  const south = c.corner === "SW" || c.corner === "SE";
+  return { x: east ? r.width - w : 0, y: south ? r.depth - d : 0, w, d };
+}
+
+/* The outline, clockwise from the top-left, as an SVG points string. */
+function roomPoints(r) {
+  const c = cutRect(r), W = r.width, D = r.depth;
+  if (!c) return "0,0 " + W + ",0 " + W + "," + D + " 0," + D;
+  const k = r.cut.corner;
+  if (k === "NE") return "0,0 " + c.x + ",0 " + c.x + "," + c.d + " " + W + "," + c.d + " " + W + "," + D + " 0," + D;
+  if (k === "NW") return c.w + ",0 " + W + ",0 " + W + "," + D + " 0," + D + " 0," + c.d + " " + c.w + "," + c.d;
+  if (k === "SE") return "0,0 " + W + ",0 " + W + "," + c.y + " " + c.x + "," + c.y + " " + c.x + "," + D + " 0," + D;
+  return "0,0 " + W + ",0 " + W + "," + D + " " + c.w + "," + D + " " + c.w + "," + c.y + " 0," + c.y;
+}
+
+/* How much of an outer wall survives the cut, in that wall's own offset terms:
+   north and south measured from the left, east and west from the top. */
+function wallSpan(r, wall) {
+  const c = cutRect(r);
+  const full = (wall === "N" || wall === "S") ? r.width : r.depth;
+  if (!c) return { lo: 0, hi: full };
+  const k = r.cut.corner;
+  if (wall === "N" && k === "NW") return { lo: c.w, hi: r.width };
+  if (wall === "N" && k === "NE") return { lo: 0, hi: r.width - c.w };
+  if (wall === "S" && k === "SW") return { lo: c.w, hi: r.width };
+  if (wall === "S" && k === "SE") return { lo: 0, hi: r.width - c.w };
+  if (wall === "W" && k === "NW") return { lo: c.d, hi: r.depth };
+  if (wall === "W" && k === "SW") return { lo: 0, hi: r.depth - c.d };
+  if (wall === "E" && k === "NE") return { lo: c.d, hi: r.depth };
+  if (wall === "E" && k === "SE") return { lo: 0, hi: r.depth - c.d };
+  return { lo: 0, hi: full };
+}
+
+function openingOffWall(op, r) {
+  const s = wallSpan(r, op.wall);
+  return op.offset < s.lo - 0.5 || op.offset + op.width > s.hi + 0.5;
+}
+
+/* A box is in the room when it sits inside the bounding rectangle and clear of
+   the removed corner. */
+function boxOutsideRoom(box, r) {
+  if (box.x < 0 || box.y < 0 || box.x + box.w > r.width || box.y + box.d > r.depth) return true;
+  const c = cutRect(r);
+  return !!c && overlaps(box, c);
 }
 
 /* Footprint: the axis-aligned box the item occupies once turned. */
@@ -479,6 +559,7 @@ function placeItem(it) {
   for (let y = 0; y + fp.d <= r.depth; y += 10) {
     for (let x = 0; x + fp.w <= r.width; x += 10) {
       const box = { x, y, w: fp.w, d: fp.d };
+      if (boxOutsideRoom(box, r)) continue;
       if (!r.items.some(o => o !== it && o.placed && overlaps(box, boxOf(o)))) {
         it.x = x; it.y = y; it.placed = true; return;
       }
@@ -519,9 +600,7 @@ function flagsFor(it) {
   const r = room(), out = [];
   if (!it.placed) return out;
   const box = boxOf(it);
-  if (box.x < 0 || box.y < 0 || box.x + box.w > r.width || box.y + box.d > r.depth) {
-    out.push("outside the room");
-  }
+  if (boxOutsideRoom(box, r)) out.push("outside the room");
   const hits = r.items.filter(o => o !== it && o.placed && overlaps(box, boxOf(o))).map(o => o.name);
   if (hits.length) out.push("overlaps " + hits.join(", "));
   const doors = r.openings.filter(op => op.kind === "door" && overlaps(box, doorSweepBox(op, r)));
@@ -558,7 +637,10 @@ function say(id, text, warn) {
 
 function serialiseRoom(r, level) {
   const h = level === 2 ? "## " : "# Room plan: ";
-  const out = [h + r.name, "", "Room: " + r.width + " × " + r.depth + " cm", ""];
+  const out = [h + r.name, "", "Room: " + r.width + " × " + r.depth + " cm"];
+  const c = cutRect(r);
+  if (c) out.push("Cut: " + CORNERS[r.cut.corner].replace(" ", "-") + " " + c.w + " × " + c.d + " cm");
+  out.push("");
 
   if (r.openings.length) {
     out.push("| Opening | Wall | From | Width | Swing | Hinge |");
@@ -662,6 +744,29 @@ function wallLetter(c) {
   return null;
 }
 
+
+/* "Cut: top-right 150 x 100 cm", and the compass spellings people reach for
+   instead. Sizes follow whatever unit the Room line used. */
+function parseCut(body, roomScale) {
+  const m = body.match(/^[ \t]*cut\s*[:\-]?\s*([a-z \-]+?)\s*[, ]\s*(\d+(?:\.\d+)?)\s*(m|cm)?\s*x\s*(\d+(?:\.\d+)?)\s*(m|cm)?/im);
+  if (!m) return null;
+  const corner = cornerCode(m[1]);
+  if (!corner) return null;
+  const unit = (m[5] || m[3] || "").toLowerCase();
+  const scale = unit === "m" ? 100 : (unit === "cm" ? 1 : roomScale);
+  const w = Math.round(parseFloat(m[2]) * scale), d = Math.round(parseFloat(m[4]) * scale);
+  return (w > 0 && d > 0) ? { corner, w, d } : null;
+}
+
+function cornerCode(text) {
+  const k = String(text).toLowerCase().replace(/[^a-z]/g, "");
+  if (/^(nw|northwest|topleft|upperleft)$/.test(k)) return "NW";
+  if (/^(ne|northeast|topright|upperright)$/.test(k)) return "NE";
+  if (/^(se|southeast|bottomright|lowerright)$/.test(k)) return "SE";
+  if (/^(sw|southwest|bottomleft|lowerleft)$/.test(k)) return "SW";
+  return null;
+}
+
 /* Parse a whole document into rooms. Never throws on a bad row: it collects
    what it can and reports what it skipped. */
 function parsePlan(text) {
@@ -702,7 +807,7 @@ function parsePlan(text) {
       if (nm) heading = nm[1];
     }
     const name = (heading || "Untitled room").replace(/^room plans?\s*:\s*/i, "").trim() || "Untitled room";
-    const r = { id: newId(), name, width, depth, openings: [], items: [] };
+    const r = { id: newId(), name, width, depth, cut: parseCut(body, unit === "m" ? 100 : 1), openings: [], items: [] };
 
     let map = null, mode = null;
     sec.lines.forEach((line, i) => {
@@ -826,17 +931,24 @@ function renderPlan() {
   defs.appendChild(p10); defs.appendChild(p100);
   svg.appendChild(defs);
 
-  svg.appendChild(el("rect", { x: 0, y: 0, width: r.width, height: r.depth, class: "room-floor" }));
+  const pts = roomPoints(r);
+  svg.appendChild(el("polygon", { points: pts, class: "room-floor" }));
   if (model.settings.grid) {
-    svg.appendChild(el("rect", { x: 0, y: 0, width: r.width, height: r.depth, fill: "url(#g10)", stroke: "none" }));
-    svg.appendChild(el("rect", { x: 0, y: 0, width: r.width, height: r.depth, fill: "url(#g100)", stroke: "none" }));
+    svg.appendChild(el("polygon", { points: pts, fill: "url(#g10)", stroke: "none" }));
+    svg.appendChild(el("polygon", { points: pts, fill: "url(#g100)", stroke: "none" }));
   }
-  svg.appendChild(el("rect", {
-    x: 0, y: 0, width: r.width, height: r.depth, class: "room-wall",
-    "vector-effect": "non-scaling-stroke"
-  }));
+  svg.appendChild(el("polygon", { points: pts, class: "room-wall", "vector-effect": "non-scaling-stroke" }));
 
   renderDimensions(r, fs);
+  const cut = cutRect(r);
+  if (cut) {
+    const g = el("g", { "aria-hidden": "true" });
+    g.appendChild(el("text", {
+      x: cut.x + cut.w / 2, y: cut.y + cut.d / 2 + fs * 0.35, class: "dim-text",
+      "text-anchor": "middle", "font-size": fs * 0.85
+    }, cut.w + " × " + cut.d + " cut"));
+    svg.appendChild(g);
+  }
   r.items.filter(it => it.placed).forEach(it => renderItem(it, fs));
   // Openings are drawn last so a wardrobe pushed against a window never hides
   // the fact that there is a window behind it. That is the whole question the
@@ -870,7 +982,7 @@ function renderDimensions(r, fs) {
 
 function renderOpening(op, i, r) {
   const l = openingLine(op, r);
-  const g = el("g", { class: "opening", "data-op": i });
+  const g = el("g", { class: "opening" + (openingOffWall(op, r) ? " is-off-wall" : ""), "data-op": i });
 
   // Knock the wall out under the opening, then draw the opening itself.
   g.appendChild(el("line", { x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2, class: "opening-gap", "vector-effect": "non-scaling-stroke" }));
@@ -1134,7 +1246,7 @@ function switchRoom(id) {
 
 function newRoom() {
   pushUndo();
-  const r = { id: newId(), name: uniqueRoomName("Room"), width: 400, depth: 300, openings: [], items: [] };
+  const r = { id: newId(), name: uniqueRoomName("Room"), width: 400, depth: 300, cut: null, openings: [], items: [] };
   model.rooms.push(r);
   model.currentRoom = r.id;
   selectedId = null; selectedOpening = -1;
@@ -1244,6 +1356,13 @@ function renderOpeningRows() {
     m.textContent = wallName(op.wall) + " wall · " + op.width + " cm · " + op.offset + " cm from the corner"
       + (op.kind === "door" ? " · swings " + (op.swing === "out" ? "out" : "in") : "");
     b.appendChild(n); b.appendChild(m);
+    if (openingOffWall(op, r)) {
+      const s2 = wallSpan(r, op.wall);
+      const f = document.createElement("span");
+      f.className = "row-meta row-flag";
+      f.textContent = "past the end of that wall · it runs " + s2.lo + " to " + s2.hi + " cm";
+      b.appendChild(f);
+    }
     b.addEventListener("click", () => selectOpening(i));
 
     const del = document.createElement("button");
@@ -1310,6 +1429,10 @@ function renderRoomForm() {
   $("room-name").value = r.name;
   $("room-width").value = r.width;
   $("room-depth").value = r.depth;
+  const c = r.cut;
+  $("cut-corner").value = c ? c.corner : "";
+  $("cut-size").hidden = !c;
+  if (c) { $("cut-w").value = c.w; $("cut-d").value = c.d; }
 }
 
 function renderAll() {
@@ -1379,6 +1502,18 @@ function wirePanel() {
     say("canvas-status", (kind === "door" ? "Door" : "Window") + " added to the " + wallName(wall) + " wall.");
   });
 
+  $("cut-corner").addEventListener("change", (e) => {
+    const r = room();
+    beginEdit();
+    if (!e.target.value) { r.cut = null; }
+    else if (r.cut) { r.cut.corner = e.target.value; }
+    else { r.cut = { corner: e.target.value, w: Math.round(r.width / 3), d: Math.round(r.depth / 3) }; }
+    renderAll(); save();
+    if (r.cut) { $("cut-w").focus(); $("cut-w").select(); }
+  });
+  onInput("cut-w", v => { const r = room(), n = parseInt(v, 10); if (r.cut && n > 0 && n < r.width) { r.cut.w = n; renderAll(); } });
+  onInput("cut-d", v => { const r = room(), n = parseInt(v, 10); if (r.cut && n > 0 && n < r.depth) { r.cut.d = n; renderAll(); } });
+
   $("room-pick").addEventListener("change", (e) => switchRoom(e.target.value));
   $("room-new").addEventListener("click", newRoom);
   $("room-delete").addEventListener("click", deleteRoom);
@@ -1447,6 +1582,9 @@ function exportableSVG(scale) {
     [".grid-100", { stroke: v("--rule-faint"), fill: "none" }],
     [".room-floor", { fill: v("--paper") }],
     [".room-wall", { fill: "none", stroke: v("--ink"), "stroke-width": "2" }],
+    [".is-off-wall .opening-window", { stroke: v("--berry") }],
+    [".is-off-wall .opening-leaf", { stroke: v("--berry") }],
+    [".is-off-wall .opening-arc", { stroke: v("--berry") }],
     [".dim-line", { stroke: v("--ink-faint"), "stroke-width": "1" }],
     [".dim-text", { fill: v("--ink-muted") }],
     [".opening-window", { stroke: v("--blue"), "stroke-width": "4", fill: "none" }],
@@ -1539,7 +1677,7 @@ function loadMarkdown(text, source) {
   res.rooms.forEach(r => {
     const existing = model.rooms.find(x => x.name.toLowerCase() === r.name.toLowerCase());
     if (existing) {
-      Object.assign(existing, { width: r.width, depth: r.depth, openings: r.openings, items: r.items });
+      Object.assign(existing, { width: r.width, depth: r.depth, cut: r.cut, openings: r.openings, items: r.items });
       replaced++;
       first = first || existing.id;
     } else {
@@ -1639,7 +1777,7 @@ function load() {
     if (!raw) return null;
     const m = JSON.parse(raw);
     if (!m || !m.rooms || !m.rooms.length) return null;
-    m.rooms.forEach(r => { r.openings = r.openings || []; r.items = r.items || []; });
+    m.rooms.forEach(r => { r.openings = r.openings || []; r.items = r.items || []; r.cut = r.cut || null; });
     m.settings = m.settings || { snap: 5, grid: true };
     return m;
   } catch (e) { return null; }
