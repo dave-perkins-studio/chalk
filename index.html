@@ -350,6 +350,8 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
       <section class="panel-section" aria-labelledby="k-openings">
         <h2 class="kicker" id="k-openings">Doors and windows</h2>
         <ul class="rows" id="opening-rows"></ul>
+        <details class="presets" id="add-opening">
+          <summary>Add a door or window</summary>
         <div class="field-row">
           <label class="field"><span>Type</span>
             <select id="op-kind"><option value="door">Door</option><option value="window">Window</option></select></label>
@@ -372,6 +374,7 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
             <select id="op-hinge"><option value="left">Left</option><option value="right">Right</option></select></label>
         </div>
         <button type="button" class="btn-small" id="op-add">Add opening</button>
+        </details>
       </section>
 
       <details class="place" id="place-room">
@@ -965,18 +968,28 @@ function focusedRow(ul) {
   return { index: [...ul.children].indexOf(li), main: a.classList.contains("row-main") };
 }
 
+/* In the DOM is not the same as on screen. Deleting the selected item hides
+   the editor, and focusing a hidden field leaves no ring anywhere on the page,
+   which is worse than landing on the body: the browser still believes
+   something is focused. A real mouse click hides this, because the pointer
+   moves focus to the button first; switch access and voice control do not. */
+function onScreen(node) {
+  return !!(node && document.body.contains(node)
+    && !node.closest("[hidden]") && node.getClientRects().length);
+}
+
 function restoreRowFocus(ul, at) {
   if (!at) return;
   if (at.editor) {
     const f = $(at.editor);
-    if (f && document.body.contains(f)) { f.focus(); setCaret(f, at.caret); }
-    return;
+    if (onScreen(f)) { f.focus(); setCaret(f, at.caret); return; }
+    at = { index: 0, main: true };   // the item went; fall through to the list
   }
   const rows = [...ul.children].filter(li => li.querySelector("button"));
   if (!rows.length) return;
   const li = rows[Math.min(at.index, rows.length - 1)];
   const btn = li.querySelector(at.main ? ".row-main" : ".btn-small") || li.querySelector("button");
-  if (btn) btn.focus();
+  if (onScreen(btn)) btn.focus();
 }
 
 
@@ -1359,7 +1372,9 @@ function renderRoomSwitcher() {
   model.rooms.forEach(r => {
     const o = document.createElement("option");
     o.value = r.id;
-    o.textContent = r.name + " · " + metres(r.width) + " × " + metres(r.depth);
+    // Name only. The size is in the plan caption immediately below, and the
+    // longer string clipped mid-character in the header's narrow flex row.
+    o.textContent = r.name;
     sel.appendChild(o);
   });
   sel.value = model.currentRoom;
@@ -1570,7 +1585,20 @@ function renderPresetRows() {
 function renderSelectedForm() {
   const it = selectedItem();
   const sec = $("selected-section");
-  if (!it) { sec.hidden = true; return; }
+  if (!it) {
+    // The editor is about to go. If focus is inside it, hand focus on before
+    // hiding rather than after: hiding the node the browser thinks is focused
+    // drops the ring to the body, and a switch or voice user has nothing to
+    // carry on from. The first furniture row is the nearest sensible place.
+    if (document.activeElement && document.activeElement.closest
+        && document.activeElement.closest("#selected-section")) {
+      const next = $("item-rows").querySelector(".row-main")
+        || svg.querySelector("g.item") || $("btn-undo");
+      if (next) next.focus();
+    }
+    sec.hidden = true;
+    return;
+  }
   sec.hidden = false;
   $("sel-name").value = it.name;
   $("sel-w").value = it.w;

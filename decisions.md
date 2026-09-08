@@ -79,3 +79,35 @@ works, where the list is open and Common sizes is collapsed.
 | Collapse the openings *add form*, keep the list | this decision | to build |
 | Everything design-qa raises | QA gate | pending |
 | Separate planner per job; bottom library drawer | research §5 | rejected, with reasons in the research |
+
+## 2026-09-08 — QA gate and fix cycle
+
+design-qa returned 1 major and 1 minor, no blockers. Both reproduced, both
+fixed. Its report is `qa/qa-report.md`.
+
+**Major, focus left on a hidden field.** QA corrected my own framing usefully:
+an ordinary mouse click does not trigger it, because the pointer moves focus
+to the button before the handler runs. It does trigger on any activation that
+skips that, which is how switch access and voice control invoke a control. So
+the people it hurts are exactly the ones least able to recover from it.
+
+The first fix, a visibility guard in `restoreRowFocus`, was not enough. Focus
+was being restored while the editor was still on screen, and only hidden a
+moment later by `renderSelectedForm`, so it still ended on the body. The real
+fix hands focus on *before* hiding, to the first furniture row. Verified for
+delete, deselect and remove-while-editing.
+
+**Minor, the room switcher clipped its own labels below 560px.** Fixed by
+dropping the dimensions from the option text rather than fighting it with CSS,
+which native `<select>` does not support reliably. The size is printed in the
+plan caption immediately below, so the long label was repeating itself.
+
+**Also built:** the doors and windows add form now collapses, keeping the list
+visible, per the decision above.
+
+**Regression run before merge:** both rooms load, the L-shape draws, rotate,
+nudge, duplicate, delete and undo all work, the whole-house Markdown
+round-trips including the cut, the PNG exports, overlapping openings are
+flagged in words, no console errors, and nothing overflows at 375px.
+
+Merged to master and published, as authorised.
