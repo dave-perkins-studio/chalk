@@ -15,6 +15,12 @@
    in the same grammar: square, hairline ring, weighted bottom edge, GOV.UK
    focus copied verbatim from section 21. */
 
+/* A class that sets display beats the UA's [hidden]{display:none}, so every
+   .field-row toggled with .hidden stayed on screen: choosing Window still
+   showed the door's swing and hinge, and a rectangular room still showed the
+   cut sizes, with the last L-shape's numbers left in them. */
+[hidden]{display:none !important}
+
 .planner{padding-top:var(--u2);padding-bottom:var(--u4)}
 @media (min-width:900px){
   .planner{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--u2)}
