@@ -128,3 +128,35 @@ That repo is a signpost with no working copy under `~/Code`: it has one page,
 nothing to maintain, and keeping a folder named after the old name next to the
 new one would only confuse the workspace. Clone it if it ever needs editing,
 or delete it once the old link stops mattering.
+
+
+## 2026-09-08 — perkins-review critique, and the fix pass
+
+Two assessments run in parallel and merged: a judgement pass on opus that used
+the app live, and a mechanical pass running the detector and a contrast matrix.
+Report at `qa/review/2026-09-08-chalk-critique.md`. **27 of 40, Acceptable**,
+with four of eight cognitive-load checks failing.
+
+**Reconciled before writing.** The judgement pass read the plan's dimension
+labels at 5.21:1 and called the contrast row a failure. Measured live they are
+`#64594B` on paper at 6.13:1, and the token on tint is 5.56:1. Both clear the
+5.5 floor, so the row passes and the detector agrees. The detector's two
+`clipped-overflow-container` hits are on `html` and `body`, which is the app
+shell, and were verified harmless at 1280x500.
+
+**Fixed and shipped:** the Label in Name blocker on the Remove buttons; the two
+disclosures that read as headings; the focus field 15 ghost buttons were
+swallowing, including both Deletes; the stale status line; the fixed viewBox
+margin that made small rooms draw small; the width-only breakpoint that left a
+postage stamp at 200% zoom; the Settings chevron; hard-coded `Cmd` for family on
+Windows; the nudge that ignored the Snap setting; furniture on the plan that
+announced itself as a button but ignored Enter and Space; two landmarks sharing
+one name; the plan being `role="img"`, whose children ARIA treats as decoration;
+untethered selection, caret and scrollbar; the export with no room name; the
+room switch that kept its scroll and said nothing; and the wording on the one
+action undo cannot reach.
+
+**Left as questions for David, not fixed unilaterally:** the panel is still
+about two screens with everything shut, and the plan still gets a fifth of the
+viewport. Both come from the decision to give the panel a permanent full-height
+column, which is a structural change rather than a fix.

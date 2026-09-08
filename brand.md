@@ -174,3 +174,20 @@ it was on or off. Snap was never a toggle in the first place: it chooses
 between two step sizes, so it is offered as a choice. The switch track and knob
 are square, like everything else in the system, and the state is written out so
 it never rests on the knob's position alone.
+
+### 11. Browser surfaces themed
+
+**What.** Selection, caret and the panel's scrollbar are painted from the
+palette rather than left to the browser.
+
+**Why.** The app shell made the panel's scrollbar the most visible piece of
+chrome on the page, and it was OS default grey sitting against paper. The craft
+floor asks for these and the review found all three unthemed.
+
+### Corrected, 8 September 2026
+
+Deviation 4 said Excursion has no chevron glyph, and then the Settings toggle
+shipped a rotating CSS chevron three lines from the drawn plus invented to
+avoid one. The review caught it. Settings now uses the same drawn plus as every
+other disclosure, and so do Common sizes and Add a door or window, which had no
+mark at all and read as headings.

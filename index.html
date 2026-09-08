@@ -22,6 +22,17 @@
    cut sizes, with the last L-shape's numbers left in them. */
 [hidden]{display:none !important}
 
+/* The app shell made the panel's scrollbar the most visible piece of chrome on
+   the page, and it was the OS default grey. Selection and caret were the
+   browser's too. */
+::selection{background:var(--focus-yellow);color:var(--focus-ink)}
+input,textarea,select{caret-color:var(--ink)}
+.planner-panel{scrollbar-width:thin;scrollbar-color:var(--taupe) transparent}
+.planner-panel::-webkit-scrollbar{width:10px}
+.planner-panel::-webkit-scrollbar-track{background:transparent}
+.planner-panel::-webkit-scrollbar-thumb{background:var(--taupe);border:3px solid var(--paper)}
+.planner-panel::-webkit-scrollbar-thumb:hover{background:var(--ink-muted)}
+
 /* --- app shell ----------------------------------------------------------
    Excursion's .hold column is a document measure — a reading width for prose.
    This is a canvas tool, so the app runs the full width between the two frame
@@ -36,7 +47,7 @@
   gap:var(--u2);flex-wrap:wrap;padding:var(--u) 0}
 .app-body{padding-top:var(--u);padding-bottom:var(--u2)}
 
-@media (min-width:900px){
+@media (min-width:900px) and (min-height:620px){
   /* No page-level scroll on a desktop: the shell is exactly the viewport, the
      plan takes the height it is given, and the panel scrolls inside its own
      column. This replaces the position:sticky canvas, which needed the page to
@@ -57,13 +68,15 @@
 .planner-canvas{min-width:0}
 .toolbar{display:flex;flex-wrap:wrap;gap:var(--u-half);margin:var(--u) 0}
 .canvas-stage{position:relative;min-height:0}
-#plan{width:100%;height:auto;max-height:calc(100vh - 260px);display:block;
-  touch-action:none;background:transparent}
-@media (min-width:900px){
+/* Stacked, the plan is bounded by the viewport height, which at 200% zoom left
+   it a postage stamp. A floor keeps it usable and lets the page scroll to it. */
+#plan{width:100%;height:auto;max-height:calc(100vh - 260px);min-height:320px;
+  display:block;touch-action:none;background:transparent}
+@media (min-width:900px) and (min-height:620px){
   .canvas-stage{flex:1 1 auto}
   /* Absolute inside the stage so the SVG takes the height the flex row hands
      it rather than dictating it; preserveAspectRatio does the letterboxing. */
-  #plan{position:absolute;inset:0;width:100%;height:100%;max-height:none}
+  #plan{position:absolute;inset:0;width:100%;height:100%;max-height:none;min-height:0}
 }
 
 /* The first thing a family member sees on a shared, empty plan. */
@@ -111,10 +124,15 @@
   cursor:pointer;min-height:44px;padding:13px 4px;display:flex;align-items:center;
   gap:8px;list-style:none}
 .settings > summary::-webkit-details-marker{display:none}
-.settings > summary::after{content:"";width:9px;height:9px;flex:0 0 auto;
-  border-right:2px solid currentColor;border-bottom:2px solid currentColor;
-  transform:translateY(-2px) rotate(45deg)}
-.settings[open] > summary::after{transform:translateY(2px) rotate(-135deg)}
+/* This was a rotating chevron, which brand.md rules out by name three lines
+   from the plus the page invented to avoid one. Same drawn mark as everywhere
+   else that opens. */
+.settings > summary::after{content:"";width:12px;height:12px;flex:0 0 auto;
+  background-image:linear-gradient(currentColor,currentColor),
+                   linear-gradient(currentColor,currentColor);
+  background-size:12px 2px,2px 12px;background-position:center,center;
+  background-repeat:no-repeat}
+.settings[open] > summary::after{background-size:12px 2px,0 0}
 .settings > summary:hover{color:var(--edge-deep)}
 .settings > summary:focus-visible{outline:3px solid transparent;color:var(--focus-ink);
   background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink)}
@@ -235,7 +253,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{
 .btn-small:hover:not(:focus-visible){color:var(--edge-deep);border-color:var(--edge-deep)}
 .btn-small:active{transform:translateY(3px);border-bottom-width:1px;margin-bottom:2px}
 .btn-small.is-done{color:var(--blue);border-bottom-color:var(--blue)}
+/* A plain class beats button:focus-visible on specificity, so every ghost
+   button, including both Deletes and Clear saved plan, was focusing with no
+   yellow field. The focus rule has to win here. */
 .btn-small.ghost{background:transparent}
+.btn-small.ghost:focus-visible{background:var(--focus-yellow);color:var(--focus-ink)}
 .btn-small.ghost:hover:not(:focus-visible){background:var(--paper-tint)}
 .btn-small[aria-pressed=true]{background:var(--paper-tint);color:var(--edge-deep);
   border-bottom-color:var(--edge-deep)}
@@ -291,11 +313,27 @@ details.place > summary .kicker{margin:0}
 .place-body{padding:var(--u-half) 0 var(--u2)}
 
 details.presets{border-top:1px dashed var(--rule-faint);padding-top:var(--u-half)}
+/* These two read as headings before they carried a mark: same face, weight,
+   colour and case as the h2 beside them, with only the cursor to tell you they
+   opened. Common sizes is the quick way to add furniture, so a first-timer was
+   losing the fast path entirely. Same drawn plus as details.place. */
 details.presets summary{font-family:var(--wayfind);font-weight:500;font-size:14px;
   letter-spacing:.06em;text-transform:uppercase;color:var(--blue);cursor:pointer;
-  padding:12px 2px;min-height:44px;display:flex;align-items:center}
+  padding:12px 2px;min-height:44px;display:flex;align-items:center;
+  justify-content:space-between;gap:var(--u);list-style:none}
+details.presets summary::-webkit-details-marker{display:none}
+details.presets summary::after{content:"";flex:0 0 auto;width:12px;height:12px;
+  background-image:linear-gradient(var(--blue),var(--blue)),
+                   linear-gradient(var(--blue),var(--blue));
+  background-size:12px 2px,2px 12px;background-position:center,center;
+  background-repeat:no-repeat}
+details.presets[open] summary::after{background-size:12px 2px,0 0}
 details.presets summary:focus-visible{outline:3px solid transparent;color:var(--focus-ink);
   background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink)}
+details.presets summary:focus-visible::after{
+  background-image:linear-gradient(var(--focus-ink),var(--focus-ink)),
+                   linear-gradient(var(--focus-ink),var(--focus-ink))}
+details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
 
 .status{font-family:var(--reading);font-size:14px;color:var(--ink-muted);margin:var(--u-half) 0 0;
   min-height:1.4em}
@@ -374,13 +412,13 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
           <button type="button" class="btn-small ghost" id="btn-delete">Delete</button>
         </div>
         <div class="tool-right">
-          <button type="button" class="btn-icon" id="btn-undo" title="Undo (Cmd Z)">
+          <button type="button" class="btn-icon" id="btn-undo">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M9 6 4.5 10.5 9 15"/>
               <path d="M4.5 10.5H14a5.5 5.5 0 0 1 0 11h-3"/>
             </svg><span class="vh">Undo</span>
           </button>
-          <button type="button" class="btn-icon" id="btn-redo" title="Redo (Cmd Shift Z)">
+          <button type="button" class="btn-icon" id="btn-redo">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M15 6l4.5 4.5L15 15"/>
               <path d="M19.5 10.5H10a5.5 5.5 0 0 0 0 11h3"/>
@@ -411,12 +449,12 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
 
       <div class="canvas-stage">
         <svg id="plan" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"
-             role="img" aria-label="Room plan"></svg>
+             role="group" aria-label="Room plan"></svg>
       </div>
       <p class="status" id="canvas-status" role="status"></p>
     </section>
 
-    <aside class="planner-panel" aria-label="Plan controls">
+    <aside class="planner-panel" aria-label="This room's contents and sharing">
 
       <section class="panel-section" aria-labelledby="k-furniture">
         <h2 class="kicker" id="k-furniture">Furniture</h2>
@@ -547,7 +585,7 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
             <button type="button" class="btn-small" id="copy-all">Copy all rooms</button>
             <button type="button" class="btn-small ghost" id="download-all">Download all rooms</button>
           </div>
-          <p class="hint">Paste a plan someone has sent you, or press Cmd&nbsp;+&nbsp;V anywhere on this page.</p>
+          <p class="hint" id="paste-hint">Paste a plan someone has sent you, or press the paste shortcut anywhere on this page.</p>
           <label class="field"><span>Paste a plan</span>
             <textarea id="paste-box" spellcheck="false"></textarea></label>
           <button type="button" class="btn-small" id="load-md">Load plan</button>
@@ -578,9 +616,17 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
 /* --- constants ----------------------------------------------------------- */
 
 const STORE_KEY = "room-planner:v1";
-const MARGIN = 60;            // cm of viewBox margin for dimension labels
+/* The margin used to be a flat 60cm, so a small room drew small: a 180x150
+   room filled 28% of its own canvas with blank paper each side. Scaling it to
+   the room keeps the drawing the same size on screen whatever the room. */
+const MARGIN_MIN = 34;        // cm, enough for the dimension text at any size
+const MARGIN_SHARE = 0.14;    // of the longer wall
 const UNDO_CAP = 50;
 const WALLS = ["N", "E", "S", "W"];
+
+/* Family are sent this link, and some of them are on Windows, where "Cmd + Z
+   puts it back" is simply untrue. The key handler already takes either. */
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "Cmd" : "Ctrl";
 
 const PRESETS = [
   ["Single bed", 90, 190], ["Double bed", 135, 190], ["King bed", 150, 200],
@@ -1156,6 +1202,7 @@ function el(name, attrs, text) {
 function renderPlan() {
   const r = room();
   const hadFocus = focusedItemId();
+  const MARGIN = Math.max(MARGIN_MIN, Math.max(r.width, r.depth) * MARGIN_SHARE);
   const vw = r.width + MARGIN * 2, vh = r.depth + MARGIN * 2;
   svg.setAttribute("viewBox", (-MARGIN) + " " + (-MARGIN) + " " + vw + " " + vh);
   while (svg.firstChild) svg.removeChild(svg.firstChild);
@@ -1273,6 +1320,12 @@ function renderItem(it, fs) {
       + (it.r ? ", turned " + it.r + " degrees" : "")
       + (flags.length ? ", " + flags.join(", ") : "")
   });
+  // It announced itself as a button and had a tab stop, but selection lived
+   // only on pointerdown, so a keyboard user could reach it and not use it.
+  g.addEventListener("keydown", (evt) => {
+    if (evt.key === "Enter" || evt.key === " ") { evt.preventDefault(); select(it.id, true); }
+  });
+
   const pad = Math.max(2, fs * 0.25), bar = Math.max(2, fs * 0.3);
   g.appendChild(el("rect", { x: it.x - pad, y: it.y - pad, width: fp.w + pad * 2, height: fp.d + pad * 2, class: "focus-ring" }));
   g.appendChild(el("rect", { x: it.x - pad, y: it.y + fp.d + pad, width: fp.w + pad * 2, height: bar, class: "focus-bar" }));
@@ -1387,7 +1440,9 @@ document.addEventListener("keydown", (evt) => {
   if (evt.key.toLowerCase() === "r") { evt.preventDefault(); rotateSelected(); return; }
   if (evt.key === "Delete" || evt.key === "Backspace") { evt.preventDefault(); deleteSelected(); return; }
 
-  const step = evt.shiftKey ? 10 : 1;
+  // Was a flat 1cm, which quietly contradicted the Snap setting sitting in
+  // the toolbar. Shift is the deliberate coarse move.
+  const step = evt.shiftKey ? model.settings.snap * 2 : model.settings.snap;
   let dx = 0, dy = 0;
   if (evt.key === "ArrowLeft") dx = -step;
   else if (evt.key === "ArrowRight") dx = step;
@@ -1470,7 +1525,7 @@ function deleteSelected() {
   r.items = r.items.filter(i => i.id !== it.id);
   selectedId = null;
   renderAll(); save();
-  say("canvas-status", it.name + " removed. Cmd + Z puts it back.");
+  say("canvas-status", it.name + " removed. " + MOD + " + Z puts it back.");
 }
 
 
@@ -1489,7 +1544,13 @@ function switchRoom(id) {
   model.currentRoom = id;
   selectedId = null; selectedOpening = -1;
   renderAll(); save();
-  say("canvas-status", "");
+  // The panel kept its old scroll position, so you landed halfway down a
+  // different room, and the status line went blank rather than confirming.
+  const panel = document.querySelector(".planner-panel");
+  if (panel) panel.scrollTop = 0;
+  const r = room(), n = r.items.filter(i => i.placed).length;
+  say("canvas-status", r.name + " · " + metres(r.width) + " × " + metres(r.depth) + " · "
+    + (n ? n + (n === 1 ? " item" : " items") + " placed" : "nothing placed yet"));
 }
 
 function newRoom() {
@@ -1521,7 +1582,7 @@ function deleteRoom() {
   // which would drop it to the body, so hand focus to the switcher instead.
   const back = $("room-delete").disabled ? $("room-pick") : $("room-delete");
   reveal(back); back.focus();
-  say("canvas-status", r.name + " deleted. Cmd + Z puts it back.");
+  say("canvas-status", r.name + " deleted. " + MOD + " + Z puts it back.");
 }
 
 function renderRoomSwitcher() {
@@ -1561,7 +1622,9 @@ function itemMetaText(it) {
 }
 
 function toggleLabel(it) {
-  return (it.placed ? "Take " : "Place ") + it.name + (it.placed ? " off the plan" : " on the plan");
+  // The visible label is the first word of the name, or voice control cannot
+  // reach the button by what it says. WCAG 2.2 SC 2.5.3.
+  return (it.placed ? "Remove " : "Place ") + it.name + (it.placed ? " from the plan" : " on the plan");
 }
 
 function renderItemRows() {
@@ -1823,9 +1886,14 @@ let editingRun = false;
 function beginEdit() { if (!editingRun) { pushUndo(); editingRun = true; } }
 document.addEventListener("focusout", () => { editingRun = false; });
 
-function onInput(id, fn) {
+function onInput(id, fn, announce) {
   const e = $(id);
-  e.addEventListener("input", () => { beginEdit(); fn(e.value); save(); });
+  e.addEventListener("input", () => {
+    beginEdit(); fn(e.value); save();
+    // The status line is the only readout of the selected item, so editing
+    // that item has to move it too, or it sits there stating the old position.
+    if (announce && selectedItem()) announceSelection();
+  });
 }
 
 function wirePanel() {
@@ -1833,12 +1901,12 @@ function wirePanel() {
   onInput("room-width", v => { const n = parseInt(v, 10); if (n > 0) { room().width = n; renderAll(); } });
   onInput("room-depth", v => { const n = parseInt(v, 10); if (n > 0) { room().depth = n; renderAll(); } });
 
-  onInput("sel-name", v => { const it = selectedItem(); if (it) { it.name = v; renderPlan(); renderItemRows(); } });
-  onInput("sel-w", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && n > 0) { it.w = n; renderPlan(); renderItemRows(); } });
-  onInput("sel-d", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && n > 0) { it.d = n; renderPlan(); renderItemRows(); } });
-  onInput("sel-x", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && !isNaN(n)) { it.x = n; it.placed = true; renderPlan(); renderItemRows(); } });
-  onInput("sel-y", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && !isNaN(n)) { it.y = n; it.placed = true; renderPlan(); renderItemRows(); } });
-  onInput("sel-r", v => { const it = selectedItem(); if (it) { it.r = parseInt(v, 10) || 0; renderPlan(); renderItemRows(); } });
+  onInput("sel-name", v => { const it = selectedItem(); if (it) { it.name = v; renderPlan(); renderItemRows(); } }, true);
+  onInput("sel-w", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && n > 0) { it.w = n; renderPlan(); renderItemRows(); } }, true);
+  onInput("sel-d", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && n > 0) { it.d = n; renderPlan(); renderItemRows(); } }, true);
+  onInput("sel-x", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && !isNaN(n)) { it.x = n; it.placed = true; renderPlan(); renderItemRows(); } }, true);
+  onInput("sel-y", v => { const it = selectedItem(), n = parseInt(v, 10); if (it && !isNaN(n)) { it.y = n; it.placed = true; renderPlan(); renderItemRows(); } }, true);
+  onInput("sel-r", v => { const it = selectedItem(); if (it) { it.r = parseInt(v, 10) || 0; renderPlan(); renderItemRows(); } }, true);
   onInput("sel-notes", v => { const it = selectedItem(); if (it) it.notes = v; });
 
   $("add-item").addEventListener("click", () => {
@@ -1943,6 +2011,15 @@ function exportableSVG(scale) {
   const clone = svg.cloneNode(true);
 
   clone.querySelectorAll(".focus-ring, .focus-bar, .opening-hit").forEach(n => n.remove());
+
+  /* The room's name lived in the page caption and the filename, so two rooms
+     sent to family arrived as two anonymous drawings. Put it in the picture. */
+  const r0 = room(), box = clone.getAttribute("viewBox").split(/\s+/).map(Number);
+  const title = el("text", {
+    x: box[0] + box[2] / 2, y: box[1] + box[3] - 4, class: "dim-text",
+    "text-anchor": "middle", "font-size": Math.max(10, box[2] / 40)
+  }, r0.name + " · " + metres(r0.width) + " × " + metres(r0.depth));
+  clone.appendChild(title);
   clone.querySelectorAll(".is-selected").forEach(n => n.classList.remove("is-selected"));
 
   const map = [
@@ -2165,7 +2242,10 @@ function boot() {
   renderAll();
 
   $("clear-data").addEventListener("click", () => {
-    if (!confirm("Clear the saved plan and start again?")) return;
+    // The one thing in here that undo cannot reach, and it took the undo
+    // history with it without saying so.
+    if (!confirm("Delete every room and start again?\n\nThis cannot be undone, "
+      + "and it clears the undo history too. Copy your plans first if you want to keep them.")) return;
     try { localStorage.removeItem(STORE_KEY); } catch (e) {}
     model = defaultModel();
     selectedId = null; selectedOpening = -1; undoStack = []; redoStack = [];
