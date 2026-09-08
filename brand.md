@@ -151,3 +151,26 @@ Grid and snap sit behind a quiet Settings toggle at the end of the toolbar.
 them do nothing without a selection, and two change how the plan is drawn
 rather than what is in it. Undo is the only one that always applies, so it is
 the only one always shown.
+
+### 9. Undo and redo as drawn arrows
+
+**What.** The two history controls sit at the top right beside Settings, drawn
+as a back arrow and a forward arrow rather than written as words.
+
+**Why.** They are the only two controls that always apply, whatever is or is
+not selected, so they belong apart from the contextual actions. Drawn, because
+a pair of arrows reads as a direction at a glance where two words of similar
+length do not, and because the pair only works as a pair. Excursion has no icon
+set, so these are drawn in its own line-work: no fill, round caps and joins,
+`--blue` on paper, greyed to `--ink-faint` when there is nothing to go back to.
+
+### 10. Switches that carry their own state
+
+**What.** Grid is a switch showing On or Off in words with the knob moving to
+match. Snap is two buttons, 1 cm and 5 cm, with the current one marked.
+
+**Why.** They were two identical buttons, and nothing about either said whether
+it was on or off. Snap was never a toggle in the first place: it chooses
+between two step sizes, so it is offered as a choice. The switch track and knob
+are square, like everything else in the system, and the state is written out so
+it never rests on the knob's position alone.

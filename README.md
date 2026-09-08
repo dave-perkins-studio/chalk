@@ -22,8 +22,9 @@ depth runs top to bottom, both in centimetres.
 Add furniture from Common sizes or by typing a name and a size. Items land on
 the first free patch of floor. Drag them where you want them. Click one and its
 row opens up so you can type an exact position, size or turn, and Rotate,
-Duplicate and Delete appear above the plan. Grid and snap live under Settings,
-at the right of that row.
+Duplicate and Delete appear above the plan. Undo and redo sit at the right of
+that row as a pair of arrows, with the grid and snap switches under Settings
+beside them.
 
 For an L-shaped room, cut a corner under Room setup: pick which one, then give
 the notch its two lengths. That covers a chimney breast, a stair bulkhead or a room that
@@ -52,6 +53,7 @@ the item in the list, so you don't have to go by colour.
 | Delete | Remove the selected item |
 | Cmd + D | Duplicate it |
 | Cmd + Z | Undo |
+| Cmd + Shift + Z | Redo |
 | Cmd + V | Load a plan from the clipboard |
 | Esc | Deselect |
 

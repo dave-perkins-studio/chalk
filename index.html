@@ -88,7 +88,24 @@
 
 /* Grid and Snap change how the plan is drawn rather than what is in it, so
    they sit behind a quiet toggle at the end of the row instead of leading it. */
-.settings{margin-left:auto;position:relative}
+/* Undo and Redo are the two controls that always apply, whatever is or is not
+   selected, so they sit apart from the contextual actions and next to
+   Settings. Drawn rather than written: a pair of arrows reads as a direction
+   at a glance, where two words of the same length do not. */
+.tool-right{display:flex;gap:4px;margin-left:auto}
+.btn-icon{-webkit-appearance:none;appearance:none;background:none;border:1px solid transparent;
+  border-radius:0;width:44px;height:44px;display:inline-flex;align-items:center;
+  justify-content:center;color:var(--blue);cursor:pointer;padding:0}
+.btn-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+.btn-icon:hover:not(:disabled){background:var(--paper-tint);border-color:var(--rule);
+  box-shadow:0 2px 0 var(--edge-deep)}
+.btn-icon:active:not(:disabled){box-shadow:none;transform:translateY(2px)}
+.btn-icon:disabled{color:var(--ink-faint);cursor:default}
+.btn-icon:focus-visible{outline:3px solid transparent;color:var(--focus-ink);
+  background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink);border-color:transparent}
+
+.settings{position:relative}
 .settings > summary{font-family:var(--wayfind);font-weight:500;font-size:14px;
   letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);
   cursor:pointer;min-height:44px;padding:13px 4px;display:flex;align-items:center;
@@ -101,7 +118,39 @@
 .settings > summary:hover{color:var(--edge-deep)}
 .settings > summary:focus-visible{outline:3px solid transparent;color:var(--focus-ink);
   background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink)}
-.settings-body{display:flex;gap:var(--u-half);padding:var(--u-half) 0}
+/* Two identical-looking buttons could not say whether they were on or off.
+   A switch carries its own state in words and in the position of the knob,
+   and the snap step is a choice between two values, not a thing to toggle
+   blindly, so it is offered as both. Square, because Excursion has no pills. */
+.settings-body{display:flex;flex-direction:column;gap:var(--u-half);padding:var(--u-half) 0}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:var(--u2)}
+.set-label{font-family:var(--wayfind);font-weight:500;font-size:14px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);white-space:nowrap}
+
+.switch{-webkit-appearance:none;appearance:none;background:none;border:0;padding:6px 0;
+  min-height:44px;display:inline-flex;align-items:center;gap:10px;cursor:pointer}
+.switch-track{width:44px;height:24px;flex:0 0 auto;background:var(--paper);
+  border:1px solid var(--rule);display:block;position:relative}
+.switch-knob{position:absolute;top:2px;left:2px;width:18px;height:18px;
+  background:var(--ink-faint);transition:left var(--box-fade),background var(--box-fade)}
+.switch[aria-checked="true"] .switch-track{background:var(--paper-tint);border-color:var(--blue)}
+.switch[aria-checked="true"] .switch-knob{left:22px;background:var(--blue)}
+.switch-state{font-family:var(--reading);font-size:15px;color:var(--ink);min-width:3.2em;
+  text-align:left}
+.switch:focus-visible{outline:3px solid transparent}
+.switch:focus-visible .switch-state{color:var(--focus-ink);
+  background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink)}
+@media (prefers-reduced-motion:reduce){ .switch-knob{transition:none} }
+
+.segmented{display:flex}
+.segmented button{-webkit-appearance:none;appearance:none;font-family:var(--wayfind);
+  font-weight:500;font-size:14px;min-height:44px;padding:12px 14px;cursor:pointer;
+  background:var(--paper);color:var(--blue);border:1px solid var(--rule);border-radius:0}
+.segmented button + button{border-left:0}
+.segmented button[aria-pressed="true"]{background:var(--paper-tint);color:var(--ink);
+  border-color:var(--blue);box-shadow:inset 0 -2px 0 var(--blue)}
+.segmented button:focus-visible{outline:3px solid transparent;color:var(--focus-ink);
+  background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink)}
 @media (min-width:900px){
   .settings-body{position:absolute;right:0;top:100%;z-index:5;background:var(--paper);
     border:1px solid var(--rule);border-bottom:2px solid var(--blue);
@@ -324,12 +373,38 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
           <button type="button" class="btn-small ghost" id="btn-duplicate">Duplicate</button>
           <button type="button" class="btn-small ghost" id="btn-delete">Delete</button>
         </div>
-        <button type="button" class="btn-small ghost" id="btn-undo">Undo</button>
+        <div class="tool-right">
+          <button type="button" class="btn-icon" id="btn-undo" title="Undo (Cmd Z)">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 6 4.5 10.5 9 15"/>
+              <path d="M4.5 10.5H14a5.5 5.5 0 0 1 0 11h-3"/>
+            </svg><span class="vh">Undo</span>
+          </button>
+          <button type="button" class="btn-icon" id="btn-redo" title="Redo (Cmd Shift Z)">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M15 6l4.5 4.5L15 15"/>
+              <path d="M19.5 10.5H10a5.5 5.5 0 0 0 0 11h3"/>
+            </svg><span class="vh">Redo</span>
+          </button>
+        </div>
         <details class="settings" id="view-settings">
           <summary>Settings</summary>
           <div class="settings-body">
-            <button type="button" class="btn-small" id="btn-grid" aria-pressed="true">Grid</button>
-            <button type="button" class="btn-small" id="btn-snap" aria-pressed="true">Snap 5 cm</button>
+            <div class="set-row">
+              <span class="set-label" id="lab-grid">Grid</span>
+              <button type="button" class="switch" id="btn-grid"
+                      role="switch" aria-checked="true" aria-labelledby="lab-grid">
+                <span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span>
+                <span class="switch-state" id="state-grid">On</span>
+              </button>
+            </div>
+            <div class="set-row">
+              <span class="set-label" id="lab-snap">Snap to</span>
+              <div class="segmented" role="group" aria-labelledby="lab-snap">
+                <button type="button" id="snap-1" aria-pressed="false">1 cm</button>
+                <button type="button" id="snap-5" aria-pressed="true">5 cm</button>
+              </div>
+            </div>
           </div>
         </details>
       </div>
@@ -524,6 +599,7 @@ let model = null;         // the whole saved document
 let selectedId = null;    // furniture item id
 let selectedOpening = -1; // index into room.openings, -1 for none
 let undoStack = [];
+let redoStack = [];
 let saveTimer = null;
 
 const $ = (id) => document.getElementById(id);
@@ -703,18 +779,49 @@ function flagsFor(it) {
   return out;
 }
 
-function pushUndo() {
-  undoStack.push(JSON.stringify(model));
+/* Any fresh change abandons whatever was ahead of you, which is how every
+   undo stack people already know behaves. */
+function pushUndo(snapshot) {
+  undoStack.push(snapshot || JSON.stringify(model));
   if (undoStack.length > UNDO_CAP) undoStack.shift();
+  redoStack = [];
+  renderHistory();
 }
 
 function undo() {
   const prev = undoStack.pop();
   if (!prev) { say("canvas-status", "Nothing to undo."); return; }
+  redoStack.push(JSON.stringify(model));
+  if (redoStack.length > UNDO_CAP) redoStack.shift();
   model = JSON.parse(prev);
   selectedId = null; selectedOpening = -1;
   renderAll(); save();
   say("canvas-status", "Undone.");
+}
+
+function redo() {
+  const next = redoStack.pop();
+  if (!next) { say("canvas-status", "Nothing to redo."); return; }
+  undoStack.push(JSON.stringify(model));
+  if (undoStack.length > UNDO_CAP) undoStack.shift();
+  model = JSON.parse(next);
+  selectedId = null; selectedOpening = -1;
+  renderAll(); save();
+  say("canvas-status", "Redone.");
+}
+
+/* Greyed out is the honest answer to "can I go back from here", and it stops
+   the pair reading as two live buttons that quietly do nothing. */
+function renderHistory() {
+  const u = $("btn-undo"), r = $("btn-redo");
+  if (!u || !r) return;
+  const moving = document.activeElement;
+  u.disabled = !undoStack.length;
+  r.disabled = !redoStack.length;
+  // Disabling the control that has focus drops the ring to the body.
+  if (moving && moving.disabled && (moving === u || moving === r)) {
+    (u.disabled ? (r.disabled ? $("view-settings").querySelector("summary") : r) : u).focus();
+  }
 }
 
 function say(id, text, warn) {
@@ -1242,7 +1349,7 @@ svg.addEventListener("pointermove", (evt) => {
   const p = svgPoint(evt);
   const nx = snap(p.x - drag.dx, evt.altKey), ny = snap(p.y - drag.dy, evt.altKey);
   if (nx === it.x && ny === it.y) return;
-  if (!drag.moved) { undoStack.push(drag.from); if (undoStack.length > UNDO_CAP) undoStack.shift(); drag.moved = true; }
+  if (!drag.moved) { pushUndo(drag.from); drag.moved = true; }
   it.x = nx; it.y = ny;
   renderPlan(); renderItemRows();
 });
@@ -1265,7 +1372,12 @@ document.addEventListener("keydown", (evt) => {
   if (inField(evt.target)) return;
   const mod = evt.metaKey || evt.ctrlKey;
 
-  if (mod && evt.key.toLowerCase() === "z") { evt.preventDefault(); undo(); return; }
+  if (mod && evt.key.toLowerCase() === "z") {
+    evt.preventDefault();
+    evt.shiftKey ? redo() : undo();
+    return;
+  }
+  if (mod && evt.key.toLowerCase() === "y") { evt.preventDefault(); redo(); return; }
   if (mod && evt.key.toLowerCase() === "d") { evt.preventDefault(); duplicateSelected(); return; }
   if (evt.key === "Escape") { select(null); return; }
 
@@ -1631,6 +1743,19 @@ function renderPresetRows() {
 /* The three actions that need a selection are hidden until there is one. If
    focus is sitting on one of them as it goes, hand focus on first: hiding the
    node the browser thinks is focused leaves no ring anywhere on the page. */
+function setSnap(n) {
+  model.settings.snap = n;
+  renderSettings(); save();
+}
+
+function renderSettings() {
+  const on = !!model.settings.grid;
+  $("btn-grid").setAttribute("aria-checked", String(on));
+  $("state-grid").textContent = on ? "On" : "Off";
+  $("snap-1").setAttribute("aria-pressed", String(model.settings.snap === 1));
+  $("snap-5").setAttribute("aria-pressed", String(model.settings.snap === 5));
+}
+
 function renderToolbar() {
   const group = $("tool-selected");
   const show = !!selectedItem();
@@ -1682,6 +1807,7 @@ function renderRoomForm() {
 }
 
 function renderAll() {
+  renderHistory();
   renderRoomSwitcher();
   renderPlan();
   renderItemRows();
@@ -1767,19 +1893,15 @@ function wirePanel() {
 
   $("btn-grid").addEventListener("click", () => {
     model.settings.grid = !model.settings.grid;
-    $("btn-grid").setAttribute("aria-pressed", String(model.settings.grid));
-    renderPlan(); save();
+    renderSettings(); renderPlan(); save();
   });
-  $("btn-snap").addEventListener("click", () => {
-    model.settings.snap = model.settings.snap === 5 ? 1 : 5;
-    $("btn-snap").textContent = "Snap " + model.settings.snap + " cm";
-    $("btn-snap").setAttribute("aria-pressed", String(model.settings.snap === 5));
-    save();
-  });
+  $("snap-1").addEventListener("click", () => setSnap(1));
+  $("snap-5").addEventListener("click", () => setSnap(5));
   $("btn-rotate").addEventListener("click", rotateSelected);
   $("btn-duplicate").addEventListener("click", duplicateSelected);
   $("btn-delete").addEventListener("click", deleteSelected);
   $("btn-undo").addEventListener("click", undo);
+  $("btn-redo").addEventListener("click", redo);
 }
 
 
@@ -2036,9 +2158,7 @@ function load() {
 
 function boot() {
   model = load() || defaultModel();
-  $("btn-grid").setAttribute("aria-pressed", String(model.settings.grid));
-  $("btn-snap").textContent = "Snap " + model.settings.snap + " cm";
-  $("btn-snap").setAttribute("aria-pressed", String(model.settings.snap === 5));
+  renderSettings();
   wirePanel();
   wireShare();
   renderPresetRows();
@@ -2048,7 +2168,7 @@ function boot() {
     if (!confirm("Clear the saved plan and start again?")) return;
     try { localStorage.removeItem(STORE_KEY); } catch (e) {}
     model = defaultModel();
-    selectedId = null; selectedOpening = -1; undoStack = [];
+    selectedId = null; selectedOpening = -1; undoStack = []; redoStack = [];
     renderAll(); save();
     say("share-status", "Cleared. Starting again with an empty room.");
   });
