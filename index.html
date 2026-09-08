@@ -22,7 +22,15 @@
    cut sizes, with the last L-shape's numbers left in them. */
 [hidden]{display:none !important}
 
-:root{--caret-mask:url('data:image/svg+xml;utf8,\
+
+
+:root{--cog-mask:url('data:image/svg+xml;utf8,\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" \
+stroke="black" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">\
+<circle cx="12" cy="12" r="3.4"/>\
+<path d="M12 2.4v3.2M12 18.4v3.2M21.6 12h-3.2M5.6 12h-3.2\
+M18.8 5.2l-2.3 2.3M7.5 16.5l-2.3 2.3M18.8 18.8l-2.3-2.3M7.5 7.5L5.2 5.2"/></svg>');
+  --caret-mask:url('data:image/svg+xml;utf8,\
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" \
 stroke="black" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">\
 <path d="M6 2.2V8.6"/><path d="M3 5.9 6 8.9 9 5.9"/></svg>')}
@@ -47,7 +55,12 @@ input,textarea,select{caret-color:var(--ink)}
 :root{--panel-w:340px}
 @media (min-width:1180px){:root{--panel-w:380px}}
 
-.app{display:flex;flex-direction:column;min-height:100vh}
+/* Going full width dropped the .hold column, and with it the air between the
+   content and the frame's textured gutters, so the masthead and the caption sat
+   right up against the rule. This is that air put back, scaled to the window. */
+.app{display:flex;flex-direction:column;min-height:100vh;
+  padding-left:clamp(var(--u2), 3.4vw, var(--u6));
+  padding-right:clamp(var(--u2), 3.4vw, var(--u6))}
 .app-header{display:flex;align-items:center;justify-content:space-between;
   gap:var(--u2);flex-wrap:wrap;padding:var(--u) 0}
 .app-body{padding-top:var(--u);padding-bottom:var(--u2)}
@@ -142,12 +155,10 @@ input,textarea,select{caret-color:var(--ink)}
 /* This was a rotating chevron, which brand.md rules out by name three lines
    from the plus the page invented to avoid one. Same drawn mark as everywhere
    else that opens. */
-.settings > summary::after{content:"";width:12px;height:12px;flex:0 0 auto;
-  background-image:linear-gradient(currentColor,currentColor),
-                   linear-gradient(currentColor,currentColor);
-  background-size:12px 2px,2px 12px;background-position:center,center;
-  background-repeat:no-repeat}
-.settings[open] > summary::after{background-size:12px 2px,0 0}
+.settings > summary::after{content:"";width:16px;height:16px;flex:0 0 auto;
+  background-color:currentColor;
+  -webkit-mask:var(--cog-mask) center/16px 16px no-repeat;
+          mask:var(--cog-mask) center/16px 16px no-repeat}
 .settings > summary:hover{color:var(--edge-deep)}
 .settings > summary:focus-visible{outline:3px solid transparent;color:var(--focus-ink);
   background-color:var(--focus-yellow);box-shadow:0 3px 0 var(--focus-ink)}
@@ -375,19 +386,28 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
 
 /* The switcher is wayfinding, so it sits with the masthead rather than in the
    panel: it answers "which room am I looking at", not "what is in this one". */
-.room-switch{display:flex;align-items:center;gap:var(--u-half);flex-wrap:wrap}
-.room-switch label{font-family:var(--wayfind);font-weight:500;font-size:13px;
-  letter-spacing:.16em;text-transform:uppercase;color:var(--blue)}
-.room-switch select{width:auto;min-width:170px}
-/* On a phone the switcher took four stacked lines before you saw the plan.
-   The label takes its own row and the select shares one with the button. */
+/* The picker sits where the room's name used to be printed, so it reads as the
+   label of the drawing below it rather than a control bolted to the masthead. */
+.plan-head{display:flex;align-items:baseline;gap:var(--u);flex-wrap:wrap;
+  margin-bottom:var(--u-half)}
+.plan-head .select-wrap{flex:0 0 auto}
+.plan-head select{width:auto;min-width:210px;font-family:var(--wayfind);
+  font-weight:500;font-size:17px}
+.plan-dims{font-family:var(--wayfind);font-weight:500;font-size:14px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-muted);margin:0}
 @media (max-width:560px){
-  .room-switch{width:100%}
-  .room-switch label{flex:1 0 100%}
-  /* flex-basis 0 rather than auto: a wrapping flex line wraps before it
-     shrinks, so the select has to start at zero to share the row. */
-  .room-switch select{flex:1 1 0;min-width:0}
+  .plan-head{width:100%}
+  .plan-head .select-wrap{flex:1 1 auto;min-width:0}
+  .plan-head select{min-width:0;width:100%}
 }
+
+/* Add room carries the same drawn plus the disclosures use, so "this makes
+   something new" reads the same wherever it appears. */
+.btn-plus::after{content:"";flex:0 0 auto;width:12px;height:12px;margin-left:2px;
+  background-image:linear-gradient(currentColor,currentColor),
+                   linear-gradient(currentColor,currentColor);
+  background-size:12px 2px,2px 12px;background-position:center,center;
+  background-repeat:no-repeat}
 /* The old page footer, relocated to the foot of the panel's own scroll, since
    the page itself no longer scrolls. */
 .panel-foot{border-top:1px dashed var(--rule-faint);padding-top:var(--u);
@@ -400,6 +420,18 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:0.01ms !important;animation-duration:0.01ms !important}
 }
+
+/* Everything in Excursion is square, which left a button looking like a label
+   until you hovered it. Three pixels is enough to read as "this does
+   something" at a glance and small enough that the system still reads as
+   square: fields and the plan stay hard-cornered, so the corner itself now
+   tells you which things act. */
+.btn-small,.btn-icon,.segmented,.switch-track,.settings-body,
+.rows li .row-main,.rows li .btn-small,
+details.place > summary,details.presets summary,.settings > summary,
+.masthead .app-icon{border-radius:3px}
+.segmented button:first-child{border-radius:3px 0 0 3px}
+.segmented button:last-child{border-radius:0 3px 3px 0}
 </style>
 </head>
 <body>
@@ -415,11 +447,6 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
       <span class="app-name">Chalk</span>
       <span class="app-what">Room planner</span>
     </a>
-    <div class="room-switch">
-      <label for="room-pick">Room</label>
-      <span class="select-wrap"><select id="room-pick"></select></span>
-      <button type="button" class="btn-small ghost" id="room-new">New room</button>
-    </div>
   </header>
 
   <hr class="rule rule--bolt">
@@ -429,7 +456,14 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
     <h1 class="vh">Room planner</h1>
 
     <section class="planner-canvas" aria-label="Room plan">
-      <h2 class="kicker" id="plan-caption">Bedroom 1 &middot; 4.00 &times; 3.00 m</h2>
+      <!-- The room's name was printed here, so the picker belongs here rather
+           than beside the masthead: it labels the drawing below it. The heading
+           stays, carrying the whole caption, for the page's outline. -->
+      <h2 class="kicker vh" id="plan-caption">Bedroom 1 &middot; 4.00 &times; 3.00 m</h2>
+      <div class="plan-head">
+        <span class="select-wrap"><select id="room-pick" aria-label="Room"></select></span>
+        <p class="plan-dims" id="plan-dims">4.00 m &times; 3.00 m</p>
+      </div>
       <p class="empty-note" id="empty-note" hidden>Nothing in this room yet. Add a
         piece of furniture from the list, or open Common sizes for the usual ones,
         then drag it around the plan.</p>
@@ -462,6 +496,7 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
               <path class="panel-fill" d="M15 4.5H21v15h-6z"/>
             </svg><span class="vh" id="btn-panel-label">Hide the panel</span>
           </button>
+          <button type="button" class="btn-small ghost btn-plus" id="room-new">Add room</button>
         <details class="settings" id="view-settings">
           <summary>Settings</summary>
           <div class="settings-body">
@@ -1330,6 +1365,7 @@ function renderPlan() {
 
   restoreItemFocus(hadFocus);
   $("plan-caption").textContent = r.name + " · " + metres(r.width) + " × " + metres(r.depth);
+  $("plan-dims").textContent = metres(r.width) + " × " + metres(r.depth);
   svg.setAttribute("aria-label", r.name + ", " + metres(r.width) + " by " + metres(r.depth)
     + ", " + r.items.filter(i => i.placed).length + " items placed");
 }

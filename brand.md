@@ -223,3 +223,27 @@ East, South and West. The status line and the rows follow.
 compass was a translation step doing no work. The file format still stores the
 letters N, E, S and W, and the parser still accepts the compass words, so plans
 written before this still load.
+
+### 15. Three-pixel corners on anything that acts
+
+**What.** Buttons, the history and panel toggles, the switch track, the
+segmented step, the disclosure summaries and the settings panel carry a 3px
+radius. Fields, selects and the plan itself stay square.
+
+**Why.** Excursion is square throughout, which left a button looking like a
+label until you hovered it. David asked for a clear but not bold sign that a
+thing is a button. Three pixels reads as "this does something" at a glance and
+is small enough that the system still reads as square. Keeping fields square is
+the point: the corner is now what tells an action from an input.
+
+### 16. A cog on Settings, and the picker moved down
+
+**What.** Settings carries a drawn cog rather than the plus, and the room
+picker sits above the plan where the room's name was printed, with Add room
+beside Settings.
+
+**Why.** The plus says "more of this page"; Settings opens preferences, which
+is a different promise, so it takes the platform's own mark for that, drawn in
+the line-work everything else uses. The picker names the drawing below it, so
+that is where it belongs, not bolted to the masthead. The heading stays in the
+outline, visually hidden, carrying the whole caption.
