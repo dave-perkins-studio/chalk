@@ -9,6 +9,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inclusive+Sans:wght@300;400&family=Jost:wght@500&family=Petrona:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="excursion-web.css">
+<script>
+  /* Reads the saved theme and sets it before the stylesheet's own dark block
+     gets a chance to paint the wrong colours first. Small and synchronous on
+     purpose: this has to run before first paint, so it stays out of the main
+     script at the foot of the page and repeats none of its logic beyond this. */
+  try {
+    var m = JSON.parse(localStorage.getItem("room-planner:v1"));
+    var t = m && m.settings && m.settings.theme;
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+</script>
 <style>
 /* Planner-only rules. Everything here is built from excursion-web.css tokens;
    no hex is typed by hand. The stylesheet carries no form-field rules and its
@@ -21,6 +32,35 @@
    showed the door's swing and hinge, and a rectangular room still showed the
    cut sizes, with the last L-shape's numbers left in them. */
 [hidden]{display:none !important}
+
+/* excursion-web.css only reads the OS's prefers-color-scheme. These two
+   blocks let a person override that per token, exactly as the brand file's
+   own dark block does, just gated on an attribute instead of a media query.
+   An attribute selector on :root always outranks a plain :root inside a
+   media query, so these win regardless of source order. System asks for
+   neither block and the OS decides, same as before this existed. */
+:root[data-theme="light"]{
+  --paper:#F7F2E9; --paper-tint:#EFE7D7;
+  --ink:#2B251C; --ink-muted:#64594B; --ink-faint:#A39781;
+  --rule:rgba(107,90,68,.40); --rule-dash:rgba(107,90,68,.35);
+  --rule-faint:rgba(107,90,68,.20);
+  --grid:rgba(107,90,68,.12);
+  --blue:#495C7C; --berry:#BF3C73; --berry-ink:#9F3260; --berry-deep:#872B51;
+  --taupe:#766D61; --edge-deep:#2F3D55;
+  --chip-blue:#4F6286; --chip-berry:#A93566; --chip-taupe:#696056;
+}
+:root[data-theme="dark"]{
+  --paper:#221E18; --paper-tint:#2C2720;
+  --ink:#F1E9D9; --ink-muted:#A69D8D; --ink-faint:#7C7363;
+  --rule:rgba(241,233,217,.25); --rule-dash:rgba(241,233,217,.22);
+  --rule-faint:rgba(241,233,217,.13);
+  --grid:rgba(241,233,217,.07);
+  --blue:#93A6C4; --berry:#C76990; --berry-ink:#D885A7; --berry-deep:#DF9BB7;
+  --taupe:#918676; --edge-deep:#CFC5B0;
+  --chip-blue:#8096B9; --chip-berry:#CE7C9E; --chip-taupe:#9E9386;
+}
+:root[data-theme]{color-scheme:only light}
+:root[data-theme="dark"]{color-scheme:only dark}
 
 /* The bolted rule's dots are two ::before/::after circles from the brand
    stylesheet; the line itself is the <hr>'s own border, untouched. Turning
@@ -395,6 +435,7 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
    label of the drawing below it rather than a control bolted to the masthead. */
 .plan-head{display:flex;align-items:baseline;gap:var(--u);flex-wrap:wrap;
   margin-bottom:var(--u-half)}
+.plan-head #room-new{margin-left:auto}
 .plan-head .select-wrap{flex:0 0 auto}
 .plan-head select{width:auto;min-width:210px;font-family:var(--wayfind);
   font-weight:500;font-size:17px}
@@ -404,6 +445,7 @@ details.presets summary:hover:not(:focus-visible){background:var(--paper-tint)}
   .plan-head{width:100%}
   .plan-head .select-wrap{flex:1 1 auto;min-width:0}
   .plan-head select{min-width:0;width:100%}
+  .plan-head #room-new{margin-left:0}
 }
 
 /* Add room carries the same drawn plus the disclosures use, so "this makes
@@ -467,6 +509,7 @@ details.place > summary,details.presets summary,.settings > summary,
       <div class="plan-head">
         <span class="select-wrap"><select id="room-pick" aria-label="Room"></select></span>
         <p class="plan-dims" id="plan-dims">4.00 m &times; 3.00 m</p>
+        <button type="button" class="btn-small ghost btn-plus" id="room-new">Add room</button>
       </div>
       <p class="empty-note" id="empty-note" hidden>Nothing in this room yet. Add a
         piece of furniture from the list, or open Common sizes for the usual ones,
@@ -500,7 +543,6 @@ details.place > summary,details.presets summary,.settings > summary,
               <path class="panel-fill" d="M15 4.5H21v15h-6z"/>
             </svg><span class="vh" id="btn-panel-label">Hide the panel</span>
           </button>
-          <button type="button" class="btn-small ghost btn-plus" id="room-new">Add room</button>
         <details class="settings" id="view-settings">
           <summary>Settings</summary>
           <div class="settings-body">
@@ -517,6 +559,14 @@ details.place > summary,details.presets summary,.settings > summary,
               <div class="segmented" role="group" aria-labelledby="lab-snap">
                 <button type="button" id="snap-1" aria-pressed="false">1 cm</button>
                 <button type="button" id="snap-5" aria-pressed="true">5 cm</button>
+              </div>
+            </div>
+            <div class="set-row">
+              <span class="set-label" id="lab-theme">Theme</span>
+              <div class="segmented" role="group" aria-labelledby="lab-theme">
+                <button type="button" id="theme-system" aria-pressed="true">System</button>
+                <button type="button" id="theme-light" aria-pressed="false">Light</button>
+                <button type="button" id="theme-dark" aria-pressed="false">Dark</button>
               </div>
             </div>
           </div>
@@ -787,7 +837,7 @@ function defaultModel() {
     version: 1,
     title: "",
     currentRoom: "room-1",
-    settings: { snap: 5, grid: true, panel: true },
+    settings: { snap: 5, grid: true, panel: true, theme: "system" },
     rooms: [{ id: "room-1", name: "Bedroom 1", width: 400, depth: 300, cut: null, openings: [], items: [] }]
   };
 }
@@ -2079,12 +2129,30 @@ function togglePanel() {
     : "Panel showing.");
 }
 
+/* System asks the browser and clears the attribute so excursion-web.css's own
+   prefers-color-scheme block decides, the same as before this setting
+   existed. Light and Dark set the attribute the two forced blocks key off. */
+function applyTheme() {
+  const t = model.settings.theme || "system";
+  if (t === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", t);
+}
+
+function setTheme(t) {
+  model.settings.theme = t;
+  applyTheme(); renderSettings(); save();
+}
+
 function renderSettings() {
   const on = !!model.settings.grid;
   $("btn-grid").setAttribute("aria-checked", String(on));
   $("state-grid").textContent = on ? "On" : "Off";
   $("snap-1").setAttribute("aria-pressed", String(model.settings.snap === 1));
   $("snap-5").setAttribute("aria-pressed", String(model.settings.snap === 5));
+  const t = model.settings.theme || "system";
+  $("theme-system").setAttribute("aria-pressed", String(t === "system"));
+  $("theme-light").setAttribute("aria-pressed", String(t === "light"));
+  $("theme-dark").setAttribute("aria-pressed", String(t === "dark"));
 }
 
 function renderToolbar() {
@@ -2249,6 +2317,9 @@ function wirePanel() {
   });
   $("snap-1").addEventListener("click", () => setSnap(1));
   $("snap-5").addEventListener("click", () => setSnap(5));
+  $("theme-system").addEventListener("click", () => setTheme("system"));
+  $("theme-light").addEventListener("click", () => setTheme("light"));
+  $("theme-dark").addEventListener("click", () => setTheme("dark"));
   $("btn-rotate").addEventListener("click", rotateSelected);
   $("btn-duplicate").addEventListener("click", duplicateSelected);
   $("btn-delete").addEventListener("click", deleteSelected);
@@ -2520,6 +2591,8 @@ function load() {
 
 function boot() {
   model = load() || defaultModel();
+  model.settings.theme = model.settings.theme || "system";
+  applyTheme();
   renderSettings();
   renderPanel();
   wirePanel();

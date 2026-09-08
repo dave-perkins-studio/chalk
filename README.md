@@ -12,7 +12,8 @@ One HTML file, no build step, no account, nothing sent anywhere. Open
 
 ## Using it
 
-Pick a room from the picker above the plan, or add one with Add room, beside Settings. The panel
+Pick a room from the picker above the plan. Add room sits on the same row,
+beside the room's size. The panel
 on the right has three parts: the furniture in this room, the doors and
 windows, then Room setup and Share, which stay folded away until you need them.
 
@@ -30,8 +31,9 @@ Add furniture from Common sizes or by typing a name and a size. Items land on
 the first free patch of floor. Drag them where you want them. Click one and its
 row opens up so you can type an exact position, size or turn, and Rotate,
 Duplicate and Delete appear above the plan. Undo and redo sit at the right of
-that row as a pair of arrows, with Add room and the grid and snap switches under
-Settings beside them.
+that row as a pair of arrows, with the grid, snap and theme switches under
+Settings beside them. Theme picks between the browser's own setting, always
+light, or always dark, whatever the browser or the time of day says.
 
 For an L-shaped room, cut a corner under Room setup: pick which one, then give
 the notch its two lengths. That covers a chimney breast, a stair bulkhead or a room that

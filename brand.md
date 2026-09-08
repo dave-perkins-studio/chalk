@@ -260,3 +260,19 @@ vanish at that size, which was the whole reason it was drawn.
 He also asked for the bolted rule's dots gone, keeping the line. Done as an
 override in this page's own `<style>` rather than in `excursion-web.css`,
 which stays the unedited copy it is meant to be.
+
+### 17. Add room, and the theme choice
+
+**What.** Add room moved from the toolbar to the plan's own header row, beside
+the room's size, since it is a sibling action to the picker rather than a plan
+tool. Settings gained a third choice, System, Light or Dark, as a segmented
+control matching Snap-to's shape rather than a single switch, because it is
+one of three fixed values rather than an on/off state.
+
+**Why.** `excursion-web.css` only reads the browser's own light/dark setting.
+Forcing a choice needed two blocks in this page's own style that redefine the
+same tokens the brand file's dark block does, keyed off an attribute rather
+than a media query, so the brand file itself stays untouched. A small
+synchronous script in `<head>`, separate from the main script at the foot of
+the page, applies a saved choice before the stylesheet can paint the wrong
+one, so switching rooms or reloading never flashes the old theme first.
