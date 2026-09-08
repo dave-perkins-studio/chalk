@@ -65,6 +65,68 @@
 .item:focus-visible rect.body{stroke:var(--focus-ink);stroke-width:3;fill:var(--focus-yellow)}
 .item:focus-visible .name,.item:focus-visible .dims{fill:var(--focus-ink)}
 
+
+/* --- rooms ---------------------------------------------------------------- */
+
+function uniqueRoomName(name) {
+  let base = (name || "Room").trim() || "Room", n = base, i = 2;
+  const taken = new Set(model.rooms.map(r => r.name.toLowerCase()));
+  while (taken.has(n.toLowerCase())) n = base + " " + i++;
+  return n;
+}
+
+function switchRoom(id) {
+  if (!model.rooms.some(r => r.id === id)) return;
+  model.currentRoom = id;
+  selectedId = null; selectedOpening = -1;
+  renderAll(); save();
+  say("canvas-status", "");
+}
+
+function newRoom() {
+  pushUndo();
+  const r = { id: newId(), name: uniqueRoomName("Room"), width: 400, depth: 300, openings: [], items: [] };
+  model.rooms.push(r);
+  model.currentRoom = r.id;
+  selectedId = null; selectedOpening = -1;
+  renderAll(); save();
+  $("room-name").focus();
+  $("room-name").select();
+  say("canvas-status", r.name + " added. Give it a name and a size.");
+}
+
+function deleteRoom() {
+  if (model.rooms.length < 2) {
+    say("canvas-status", "This is the only room. Add another before deleting this one.", true);
+    return;
+  }
+  const r = room();
+  if (!confirm("Delete '" + r.name + "' and everything in it?")) return;
+  pushUndo();
+  model.rooms = model.rooms.filter(x => x.id !== r.id);
+  model.currentRoom = model.rooms[0].id;
+  selectedId = null; selectedOpening = -1;
+  renderAll(); save();
+  // Deleting down to the last room disables the button focus was sitting on,
+  // which would drop it to the body, so hand focus to the switcher instead.
+  ($("room-delete").disabled ? $("room-pick") : $("room-delete")).focus();
+  say("canvas-status", r.name + " deleted. Cmd + Z puts it back.");
+}
+
+function renderRoomSwitcher() {
+  const sel = $("room-pick");
+  sel.textContent = "";
+  model.rooms.forEach(r => {
+    const o = document.createElement("option");
+    o.value = r.id;
+    o.textContent = r.name + " · " + metres(r.width) + " × " + metres(r.depth);
+    sel.appendChild(o);
+  });
+  sel.value = model.currentRoom;
+  $("room-delete").disabled = model.rooms.length < 2;
+  if (document.activeElement !== $("house-name")) $("house-name").value = model.title || "";
+}
+
 /* --- panel -------------------------------------------------------------- */
 .planner-panel{min-width:0}
 .panel-section{padding-bottom:var(--u2)}
@@ -131,6 +193,25 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
 .status.is-warn{color:var(--berry-ink)}
 .hint{font-family:var(--reading);font-size:14px;color:var(--ink-muted);margin:0 0 var(--u-half)}
 .share-buttons{display:flex;flex-wrap:wrap;gap:var(--u-half);margin-bottom:var(--u-half)}
+.sub-label{font-family:var(--wayfind);font-weight:500;font-size:13px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-muted);margin:var(--u) 0 var(--u-half)}
+.panel-section > .sub-label:first-of-type{margin-top:0}
+
+/* The switcher is wayfinding, so it sits with the masthead rather than in the
+   panel: it answers "which room am I looking at", not "what is in this one". */
+.room-switch{display:flex;align-items:center;gap:var(--u-half);flex-wrap:wrap}
+.room-switch label{font-family:var(--wayfind);font-weight:500;font-size:13px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--blue)}
+.room-switch select{width:auto;min-width:170px}
+/* On a phone the switcher took four stacked lines before you saw the plan.
+   The label takes its own row and the select shares one with the button. */
+@media (max-width:560px){
+  .room-switch{width:100%}
+  .room-switch label{flex:1 0 100%}
+  /* flex-basis 0 rather than auto: a wrapping flex line wraps before it
+     shrinks, so the select has to start at zero to share the row. */
+  .room-switch select{flex:1 1 0;min-width:0}
+}
 .footer-note{display:flex;gap:var(--u);align-items:center;justify-content:center;
   flex-wrap:wrap}
 
@@ -151,6 +232,11 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
       <span class="plate">Perkins</span>
       <span class="co">Room planner</span>
     </a>
+    <div class="room-switch">
+      <label for="room-pick">Room</label>
+      <select id="room-pick"></select>
+      <button type="button" class="btn-small ghost" id="room-new">New room</button>
+    </div>
   </header>
 
   <hr class="rule rule--bolt">
@@ -190,6 +276,7 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
           <label class="field"><span>Depth, cm</span>
             <input type="number" id="room-depth" min="50" max="3000" step="1"></label>
         </div>
+        <button type="button" class="btn-small ghost" id="room-delete">Delete this room</button>
       </section>
 
       <section class="panel-section" aria-labelledby="k-openings">
@@ -269,11 +356,20 @@ details.presets summary:focus-visible{outline:3px solid transparent;color:var(--
 
       <section class="panel-section" aria-labelledby="k-share">
         <h2 class="kicker" id="k-share">Share</h2>
+        <p class="sub-label">This room</p>
         <div class="share-buttons">
           <button type="button" class="btn-small" id="copy-md">Copy text</button>
           <button type="button" class="btn-small ghost" id="download-md">Download .md</button>
           <button type="button" class="btn-small" id="copy-png">Copy image</button>
           <button type="button" class="btn-small ghost" id="download-png">Download PNG</button>
+        </div>
+
+        <p class="sub-label">Every room</p>
+        <label class="field"><span>House name</span>
+          <input type="text" id="house-name" autocomplete="off"></label>
+        <div class="share-buttons">
+          <button type="button" class="btn-small" id="copy-all">Copy all rooms</button>
+          <button type="button" class="btn-small ghost" id="download-all">Download all rooms</button>
         </div>
         <p class="hint">Paste a plan someone has sent you, or press Cmd&nbsp;+&nbsp;V anywhere on this page.</p>
         <label class="field"><span>Paste a plan</span>
@@ -346,6 +442,7 @@ function metres(cm) { return (cm / 100).toFixed(2) + " m"; }
 function defaultModel() {
   return {
     version: 1,
+    title: "",
     currentRoom: "room-1",
     settings: { snap: 5, grid: true },
     rooms: [{ id: "room-1", name: "Bedroom 1", width: 400, depth: 300, openings: [], items: [] }]
@@ -1017,6 +1114,68 @@ function deleteSelected() {
 }
 
 
+
+/* --- rooms ---------------------------------------------------------------- */
+
+function uniqueRoomName(name) {
+  let base = (name || "Room").trim() || "Room", n = base, i = 2;
+  const taken = new Set(model.rooms.map(r => r.name.toLowerCase()));
+  while (taken.has(n.toLowerCase())) n = base + " " + i++;
+  return n;
+}
+
+function switchRoom(id) {
+  if (!model.rooms.some(r => r.id === id)) return;
+  model.currentRoom = id;
+  selectedId = null; selectedOpening = -1;
+  renderAll(); save();
+  say("canvas-status", "");
+}
+
+function newRoom() {
+  pushUndo();
+  const r = { id: newId(), name: uniqueRoomName("Room"), width: 400, depth: 300, openings: [], items: [] };
+  model.rooms.push(r);
+  model.currentRoom = r.id;
+  selectedId = null; selectedOpening = -1;
+  renderAll(); save();
+  $("room-name").focus();
+  $("room-name").select();
+  say("canvas-status", r.name + " added. Give it a name and a size.");
+}
+
+function deleteRoom() {
+  if (model.rooms.length < 2) {
+    say("canvas-status", "This is the only room. Add another before deleting this one.", true);
+    return;
+  }
+  const r = room();
+  if (!confirm("Delete '" + r.name + "' and everything in it?")) return;
+  pushUndo();
+  model.rooms = model.rooms.filter(x => x.id !== r.id);
+  model.currentRoom = model.rooms[0].id;
+  selectedId = null; selectedOpening = -1;
+  renderAll(); save();
+  // Deleting down to the last room disables the button focus was sitting on,
+  // which would drop it to the body, so hand focus to the switcher instead.
+  ($("room-delete").disabled ? $("room-pick") : $("room-delete")).focus();
+  say("canvas-status", r.name + " deleted. Cmd + Z puts it back.");
+}
+
+function renderRoomSwitcher() {
+  const sel = $("room-pick");
+  sel.textContent = "";
+  model.rooms.forEach(r => {
+    const o = document.createElement("option");
+    o.value = r.id;
+    o.textContent = r.name + " · " + metres(r.width) + " × " + metres(r.depth);
+    sel.appendChild(o);
+  });
+  sel.value = model.currentRoom;
+  $("room-delete").disabled = model.rooms.length < 2;
+  if (document.activeElement !== $("house-name")) $("house-name").value = model.title || "";
+}
+
 /* --- panel ---------------------------------------------------------------- */
 
 function renderItemRows() {
@@ -1154,6 +1313,7 @@ function renderRoomForm() {
 }
 
 function renderAll() {
+  renderRoomSwitcher();
   renderPlan();
   renderItemRows();
   renderOpeningRows();
@@ -1174,7 +1334,7 @@ function onInput(id, fn) {
 }
 
 function wirePanel() {
-  onInput("room-name", v => { room().name = v || "Untitled room"; renderPlan(); });
+  onInput("room-name", v => { room().name = v || "Untitled room"; renderPlan(); renderRoomSwitcher(); });
   onInput("room-width", v => { const n = parseInt(v, 10); if (n > 0) { room().width = n; renderAll(); } });
   onInput("room-depth", v => { const n = parseInt(v, 10); if (n > 0) { room().depth = n; renderAll(); } });
 
@@ -1219,6 +1379,11 @@ function wirePanel() {
     say("canvas-status", (kind === "door" ? "Door" : "Window") + " added to the " + wallName(wall) + " wall.");
   });
 
+  $("room-pick").addEventListener("change", (e) => switchRoom(e.target.value));
+  $("room-new").addEventListener("click", newRoom);
+  $("room-delete").addEventListener("click", deleteRoom);
+  onInput("house-name", v => { model.title = v; });
+
   $("btn-grid").addEventListener("click", () => {
     model.settings.grid = !model.settings.grid;
     $("btn-grid").setAttribute("aria-pressed", String(model.settings.grid));
@@ -1240,6 +1405,11 @@ function wirePanel() {
 /* --- share ---------------------------------------------------------------- */
 
 function currentMarkdown() { return serialise([room()]); }
+function houseMarkdown() { return serialise(model.rooms, model.title || "House"); }
+function houseStem() {
+  const n = (model.title || "house").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return n || "house";
+}
 
 function flash(btn, label) {
   const old = btn.textContent;
@@ -1347,30 +1517,45 @@ function loadMarkdown(text, source) {
       + "'Room: 400 x 300 cm' and a table of items.", true);
     return false;
   }
-  pushUndo();
-  const first = res.rooms[0];
-  const existing = model.rooms.find(r => r.name.toLowerCase() === first.name.toLowerCase());
-  if (existing && !confirm("Replace your '" + existing.name + "' with the pasted one?")) {
+
+  // Name the replacements before touching anything, so one confirm covers the
+  // whole file rather than one dialog per room.
+  const clashes = res.rooms
+    .filter(r => model.rooms.some(x => x.name.toLowerCase() === r.name.toLowerCase()))
+    .map(r => r.name);
+  if (clashes.length && !confirm(
+      (clashes.length === 1
+        ? "Replace your '" + clashes[0] + "'"
+        : "Replace " + clashes.length + " of your rooms (" + clashes.join(", ") + ")")
+      + " with the pasted version?")) {
     say("share-status", "Nothing loaded.");
-    undoStack.pop();
     return false;
   }
-  if (existing) {
-    Object.assign(existing, { width: first.width, depth: first.depth, openings: first.openings, items: first.items });
-    model.currentRoom = existing.id;
-  } else {
-    model.rooms.push(first);
-    model.currentRoom = first.id;
-  }
+
+  pushUndo();
+  if (res.title) model.title = res.title;
+
+  let replaced = 0, added = 0, first = null;
+  res.rooms.forEach(r => {
+    const existing = model.rooms.find(x => x.name.toLowerCase() === r.name.toLowerCase());
+    if (existing) {
+      Object.assign(existing, { width: r.width, depth: r.depth, openings: r.openings, items: r.items });
+      replaced++;
+      first = first || existing.id;
+    } else {
+      model.rooms.push(r);
+      added++;
+      first = first || r.id;
+    }
+  });
+  model.currentRoom = first;
   selectedId = null; selectedOpening = -1;
   renderAll(); save();
 
-  let msg = "Loaded " + first.name + ": " + first.items.length + " item"
-    + (first.items.length === 1 ? "" : "s")
-    + (first.openings.length ? ", " + first.openings.length + " opening"
-      + (first.openings.length === 1 ? "" : "s") : "") + ".";
-  if (res.rooms.length > 1) msg += " The file had " + res.rooms.length
-    + " rooms; only the first was loaded.";
+  const items = res.rooms.reduce((n, r) => n + r.items.length, 0);
+  let msg = "Loaded " + res.rooms.length + " room" + (res.rooms.length === 1 ? "" : "s")
+    + " and " + items + " item" + (items === 1 ? "" : "s") + ".";
+  if (replaced && added) msg += " " + replaced + " replaced, " + added + " added.";
   if (res.skipped.length) msg += " Skipped " + res.skipped.length + ": " + res.skipped.join("; ") + ".";
   say("share-status", msg, res.skipped.length > 0);
   return true;
@@ -1407,6 +1592,17 @@ function wireShare() {
       b => downloadBlob(b, fileStem() + ".png"),
       () => say("share-status", "Couldn't make the image.", true)
     );
+  });
+
+  $("copy-all").addEventListener("click", (e) => {
+    const btn = e.currentTarget, md = houseMarkdown();
+    navigator.clipboard.writeText(md).then(
+      () => flash(btn, "Copied"),
+      () => { $("paste-box").value = md; say("share-status", "Couldn't reach the clipboard. Every room is in the box below, ready to copy.", true); }
+    );
+  });
+  $("download-all").addEventListener("click", () => {
+    downloadBlob(new Blob([houseMarkdown()], { type: "text/markdown;charset=utf-8" }), houseStem() + "-rooms.md");
   });
 
   $("load-md").addEventListener("click", () => {

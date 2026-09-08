@@ -12,8 +12,9 @@ One HTML file, no build step, no account, nothing sent anywhere. Open
 
 ## Using it
 
-Set the room's width and depth in the panel on the right. Width runs left to
-right, depth runs top to bottom, both in centimetres.
+Pick a room from the switcher at the top, or add one with New room. Set its
+width and depth in the panel on the right. Width runs left to right, depth runs
+top to bottom, both in centimetres.
 
 Add furniture either from the Common sizes list or by typing a name and a size.
 Items land on the first free patch of floor. Drag them where you want them.
@@ -44,9 +45,13 @@ the item in the list, so you don't have to go by colour.
 You can do all of it from the keyboard. Tab moves through the items on the
 plan, then into the panel.
 
-Your plan is saved in the browser you're using, and nowhere else, so a different
-browser or another computer won't have it and you're probably best sending
-yourself the text if you want it on both.
+Every room you make is kept, so a whole house lives in one place. Share
+buttons come in two kinds: this room on its own, or all of them in a single
+file under a house name.
+
+Your plans are saved in the browser you're using, and nowhere else, so a
+different browser or another computer won't have them and you're probably best
+sending yourself the text if you want it on both.
 
 ## The file format
 
@@ -80,16 +85,17 @@ tables that have lost their outer pipes. A row it can't read is skipped and
 counted, rather than failing the lot. `samples/mangled-plan.md` is the same
 plan after a round trip through a chat app, and it loads.
 
-Several rooms go in one file under `##` headings. The parser reads them all,
-though this version only loads the first and tells you it did.
+Several rooms go in one file under `##` headings, below a `# Room plans: <house>`
+line that names the house. Loading one of those brings in every room at once.
+Any room whose name matches one of yours is replaced, and the rest are added,
+after a single confirmation that names them.
 
 ## What it doesn't do
 
 - Rooms are rectangles. No L-shapes yet.
 - Furniture turns in 90° steps, not freely.
-- One room at a time on screen.
-- The exported picture uses a system font rather than the page's, because web
-  fonts don't survive the trip into an image.
+- The exported picture covers one room, and uses a system font rather than the
+  page's, because web fonts don't survive the trip into an image.
 
 ## Files
 
@@ -97,7 +103,7 @@ though this version only loads the first and tells you it did.
 |---|---|
 | `index.html` | The whole tool |
 | `excursion-web.css` | The Excursion stylesheet, copied from `personal-site-studio`. Don't edit it here |
-| `samples/example-plan.md` | Two rooms, cleanly formatted |
+| `samples/example-plan.md` | A two-room house, cleanly formatted |
 | `samples/mangled-plan.md` | The same plan after a chat app has had a go at it |
 
 Actual house plans don't belong in this repo. They go in `personal/life/house/`.
